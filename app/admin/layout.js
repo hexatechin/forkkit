@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Package, ClipboardList, Settings, LogOut, Store } from 'lucide-react'
+import { LayoutDashboard, Package, ClipboardList, Settings, LogOut, Store, FolderTree } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function AdminLayout({ children }) {
@@ -41,6 +41,7 @@ export default function AdminLayout({ children }) {
         </div>
         <nav className="space-y-1 flex-1">
           <NavItem href="/admin" icon={LayoutDashboard}>Dashboard</NavItem>
+          <NavItem href="/admin/categories" icon={FolderTree}>Categories</NavItem>
           <NavItem href="/admin/products" icon={Package}>Products</NavItem>
           <NavItem href="/admin/orders" icon={ClipboardList}>Orders</NavItem>
           <NavItem href="/admin/settings" icon={Settings}>Settings</NavItem>

@@ -726,6 +726,17 @@ async function route(request, method, segments) {
     }
 
     if (method === "DELETE") {
+      // Block if any product still references this category
+      const { rows: productCount } = await db.query(
+        "SELECT COUNT(*)::int AS n FROM products WHERE categoryId=$1 AND tenantId=$2",
+        [cid, user.tenantId],
+      );
+      if (productCount[0].n > 0) {
+        return err(
+          `Cannot delete — ${productCount[0].n} product(s) still use this category. Move or delete them first.`,
+          400,
+        );
+      }
       await db.query("DELETE FROM categories WHERE id=$1 AND tenantId=$2", [
         cid,
         user.tenantId,

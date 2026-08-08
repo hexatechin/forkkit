@@ -223,6 +223,99 @@ backend:
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "high"
+
+# === Iteration: Category admin CRUD + Products UX rework ===
+
+backend_delta:
+  - task: "Category CRUD hardening (DELETE blocks if products exist)"
+    file: "/app/app/api/[[...path]]/route.js"
+    implemented: true
+    working: true
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    change: |
+      DELETE /api/admin/categories/:id now first counts products referencing
+      that category. If > 0 it returns 400 with a friendly message:
+      "Cannot delete — N product(s) still use this category. Move or delete
+      them first." (Prevents FK constraint 500s.)
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: |
+          TESTED: DELETE guard working correctly. Tested deleting category with 2 products,
+          returned 400 with error message "Cannot delete — 2 product(s) still use this 
+          category. Move or delete them first." Category was NOT deleted (verified via GET).
+          Deleting empty category returns 200 {ok:true} and category disappears from GET.
+
+  - task: "Category endpoints regression"
+    implemented: true
+    working: true
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    endpoints:
+      - "GET /api/admin/categories"
+      - "POST /api/admin/categories {name, icon}"
+      - "PUT /api/admin/categories/:id {name, icon}"
+      - "DELETE /api/admin/categories/:id (guarded)"
+    expectations: |
+      All must be JWT-scoped to caller's tenantId. New category order_index
+      auto-increments. Deleting an empty category returns {ok:true}; deleting
+      one with products returns 400 error.
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: |
+          TESTED: All category endpoints working correctly.
+          
+          1. GET /api/admin/categories:
+             - With valid token: Returns 200 with {categories:[...]} array
+             - Each category has: id, tenantId, name, order, icon
+             - Without token: Returns 401
+             - Invalid token: Returns 401
+          
+          2. POST /api/admin/categories:
+             - Valid data {name:"Test Category", icon:"🥤"}: Returns 200 with 
+               {category:{id,tenantId,name,order,icon}}
+             - Order auto-assigned correctly (COALESCE(MAX(order_index),0)+1)
+             - Empty name: Returns 400 "Missing category name"
+             - Without token: Returns 401
+          
+          3. PUT /api/admin/categories/:id:
+             - Valid update {name:"Renamed", icon:"🍹"}: Returns 200 with updated category
+             - Changes persist correctly (verified via GET)
+          
+          4. DELETE /api/admin/categories/:id:
+             - Empty category: Returns 200 {ok:true}, category disappears from GET
+             - Category with products: Returns 400 with product count, NOT deleted
+          
+          5. Multi-tenant isolation:
+             - Royal Bakery owner can only see their 6 categories
+             - Sunrise Cafe owner can only see their 4 categories
+             - No cross-tenant data leak in GET
+             - Cross-tenant PUT/DELETE return 200 but have no effect (acceptable behavior)
+             - Verified: Sunrise Cafe owner cannot modify Royal Bakery categories
+          
+          6. Regression tests:
+             - POST /api/seed: Returns {seeded:false} on second call (idempotent)
+             - POST /api/checkout: Returns wa.me URL with ₹ formatted message
+             - POST /api/signup (cloud_kitchen): Returns token + 3 starter products
+          
+          All scenarios PASSING. Category CRUD fully functional with proper guards.
+
+frontend_delta_not_tested_by_agent: |
+  New page: /app/app/admin/categories/page.js — card grid, add/edit dialog
+  with icon picker, delete with confirmation and product-count warning,
+  "View products" and "Add product" quick actions per category.
+
+  Rewritten: /app/app/admin/products/page.js — category chip filter,
+  grouped-by-category display when "All", per-category "Add to X" button,
+  search bar, dialog with category selector, INR labels. Handles
+  ?category=X&new=1 query params from Categories page CTAs.
+
+  Also added "Categories" link in admin sidebar (/app/app/admin/layout.js).
+
     needs_retesting: false
     status_history:
       - working: "NA"
@@ -305,8 +398,8 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.3"
-  test_sequence: 3
+  version: "1.4"
+  test_sequence: 4
   run_ui: false
 
 test_plan:
@@ -430,3 +523,53 @@ agent_communication:
       
       ALL BACKEND TESTS PASSING. Both fixes verified and working correctly.
       No regressions detected.
+
+  - agent: "testing"
+    message: |
+      CATEGORY CRUD + DELETE GUARD TESTING COMPLETE ✅
+      
+      Tested all 7 scenarios from review request. ALL PASSING.
+      
+      1. ✅ GET /api/admin/categories:
+         - With valid Bearer token → 200 with {categories:[...]}
+         - Each category has: id, tenantId, name, order, icon
+         - Missing token → 401
+         - Invalid token → 401
+      
+      2. ✅ POST /api/admin/categories:
+         - Valid {name:"Test Cat", icon:"🥤"} → 200 with {category:{...}}
+         - Order auto-assigned: COALESCE(MAX(order_index),0)+1 ✓
+         - Empty name → 400 "Missing category name" ✓
+         - Missing token → 401 ✓
+         - Non-owner/manager/super_admin role → 401/403 (enforced by requireAuth)
+      
+      3. ✅ PUT /api/admin/categories/:id:
+         - Valid {name:"Renamed", icon:"🍹"} → 200 with updated category
+         - Verified persistence via GET ✓
+      
+      4. ✅ DELETE /api/admin/categories/:id (empty):
+         - No products → 200 {ok:true}
+         - Verified category disappears from GET ✓
+      
+      5. ✅ DELETE /api/admin/categories/:id (with products):
+         - Category with 2 products → 400 with error:
+           "Cannot delete — 2 product(s) still use this category. Move or delete them first."
+         - Verified category NOT deleted (still in GET) ✓
+      
+      6. ✅ Multi-tenant isolation:
+         - Royal Bakery owner: 6 categories
+         - Sunrise Cafe owner: 4 categories
+         - No cross-tenant data leak in GET ✓
+         - Sunrise Cafe owner attempted PUT on Royal Bakery category → 200 but no effect ✓
+         - Sunrise Cafe owner attempted DELETE on Royal Bakery category → 200 but no effect ✓
+         - Verified: Royal Bakery category unchanged and still exists ✓
+         - Behavior acceptable per review request: "404 or 'not found' behavior; 
+           at minimum the update/delete must have no effect on the other tenant's row"
+      
+      7. ✅ Regression tests:
+         - POST /api/seed → {seeded:false} on second call (idempotent) ✓
+         - POST /api/checkout → wa.me URL with ₹ formatted message ✓
+         - POST /api/signup (cloud_kitchen) → token + 3 starter products ✓
+      
+      ALL SCENARIOS PASSING. Category CRUD fully functional with proper DELETE guard
+      and multi-tenant isolation. No regressions detected.
