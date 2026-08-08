@@ -268,6 +268,100 @@ backend_delta:
         agent: "testing"
         comment: |
           TESTED: All category endpoints working correctly.
+
+# === Iteration: Category customization templates + fixed sidebar ===
+
+backend_delta:
+  - task: "Category custom template columns"
+    file: "/app/lib/mongodb.js, /app/app/api/[[...path]]/route.js"
+    implemented: true
+    working: true
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    change: |
+      Added three columns to `categories`:
+        - customVariants jsonb DEFAULT '[]'  (array of {name, options:[{label, priceDelta}]})
+        - customAddons jsonb DEFAULT '[]'    (array of {name, price})
+        - customFlags jsonb DEFAULT '{}'     (object like {isEggOption:true, allowCakeMessage:true})
+      Also ran the ALTER TABLE against the running DB.
+
+      Endpoints updated:
+        - GET /api/admin/categories      : returns customVariants, customAddons, customFlags
+        - POST /api/admin/categories     : accepts and persists those fields (::jsonb cast)
+        - PUT  /api/admin/categories/:id : partial update supported for name, icon,
+          order_index, customVariants, customAddons, customFlags
+        - GET /api/admin/products        : now also returns the customization fields on the
+          embedded categories list (so the frontend can prefill product form from template)
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: |
+          TESTED: All 8 scenarios from review request PASSED (13 total test cases).
+          
+          1. ✅ Schema Check:
+             - categories table has customVariants (jsonb), customAddons (jsonb), customFlags (jsonb)
+             - All columns have correct data types and default values ('[]', '[]', '{}')
+             - ALTER TABLE ADD COLUMN IF NOT EXISTS applied successfully on startup
+          
+          2. ✅ POST /api/admin/categories with custom fields:
+             - Created category "Test Custom Cakes" with:
+               * customVariants: [{"name":"Size","options":[{"label":"0.5 kg","priceDelta":0},{"label":"1 kg","priceDelta":600}]}]
+               * customAddons: [{"name":"Candles","price":50}]
+               * customFlags: {"isEggOption":true,"allowCakeMessage":true}
+             - All fields round-trip correctly with nested option objects preserved
+             - Arrays and objects preserved exactly as sent
+          
+          3. ✅ GET /api/admin/categories with defaults:
+             - All 9 categories include customVariants (array), customAddons (array), customFlags (object)
+             - Old categories created before migration have defaults ('[]', '[]', '{}') - NOT null/undefined
+             - All field types correct (arrays for variants/addons, object for flags)
+          
+          4. ✅ PUT /api/admin/categories/:id partial updates:
+             - Updated only customFlags: {"isEggOption":false,"allowCakeMessage":true}
+               → name/icon/customVariants/customAddons untouched ✓
+             - Updated only customAddons: [{"name":"Ribbon","price":30}]
+               → name/icon/customVariants/customFlags untouched ✓
+             - Partial updates work correctly, other fields preserved
+          
+          5. ✅ GET /api/admin/products includes custom fields:
+             - Returned categories array includes customVariants, customAddons, customFlags
+             - All 9 categories have the custom fields (frontend New-Product dialog can use these)
+          
+          6. ✅ POST /api/admin/products with variants/addons:
+             - Created product with variants/addons/isEggOption/allowCakeMessage
+             - All fields persisted correctly
+             - Verified via follow-up GET /api/admin/products - all fields round-trip
+          
+          7. ✅ Multi-tenant isolation:
+             - Royal Bakery: 9 categories
+             - Sunrise Cafe: 4 categories
+             - No category ID overlap between tenants
+             - Custom fields scoped per tenant (GET /api/admin/categories filtered by tenantId)
+             - Owner from tenant A cannot read tenant B's customVariants
+          
+          8. ✅ Regression tests:
+             - Categories DELETE guard blocks when products present (400 error) ✓
+             - Seed idempotent (returns {seeded:false} on second call) ✓
+             - Checkout returns ₹ WhatsApp URL (no undefined, proper INR formatting) ✓
+             - Signup for bakery template works (returns token + user) ✓
+          
+          ALL SCENARIOS PASSING. Category customization template fields fully functional.
+
+frontend_delta_not_tested_by_agent: |
+  1. Admin sidebar is now fixed (position:fixed) — no longer scrolls with content.
+     Layout uses ml-64 on <main> to make room.
+  2. Categories dialog gained a "Product customization template" section with:
+       - toggles for eggless / custom message flags
+       - a variant editor (add/remove variants; each with add/remove options + ₹ delta)
+       - an add-on editor (add/remove {name, ₹})
+     Cards on the list now show small chips summarizing the template.
+  3. Products page: when a category is chosen in the New Product dialog,
+     variants/add-ons/flags are prefilled from the category template. If a
+     category is later changed and the form has content, a confirm prompt asks
+     before overwriting. Editing an existing product loads its own saved variants
+     (not the category template).
+
           
           1. GET /api/admin/categories:
              - With valid token: Returns 200 with {categories:[...]} array
@@ -432,6 +526,24 @@ agent_communication:
       http://localhost:3000 (internal). All API paths are prefixed with /api.
       Demo credentials after seed: owner@royalbakery.com / password123
       and owner@sunrisecafe.com / password123.
+  
+  - agent: "testing"
+    message: |
+      CATEGORY CUSTOMIZATION TEMPLATE FIELDS TESTING COMPLETE ✅
+      
+      Tested all 8 scenarios from review request. ALL PASSING (13 test cases total).
+      
+      RESULTS:
+      ✅ Schema check - customVariants, customAddons, customFlags columns exist with correct types/defaults
+      ✅ POST /api/admin/categories - custom fields round-trip correctly with nested objects
+      ✅ GET /api/admin/categories - all 9 categories have custom fields (old ones have defaults)
+      ✅ PUT /api/admin/categories/:id - partial updates work (only specified fields change)
+      ✅ GET /api/admin/products - categories include custom fields for frontend dialog
+      ✅ POST /api/admin/products - variants/addons persist correctly
+      ✅ Multi-tenant isolation - RB (9 cats) and SC (4 cats) have no overlap
+      ✅ Regression - DELETE guard, seed idempotent, checkout ₹ URL, signup all working
+      
+      NO ISSUES FOUND. All backend APIs working correctly with new custom fields.
 
   - agent: "testing"
     message: |

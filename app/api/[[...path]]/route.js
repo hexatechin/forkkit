@@ -607,7 +607,10 @@ async function route(request, method, segments) {
       [user.tenantId],
     );
     const { rows: categories } = await db.query(
-      `SELECT id, tenantId, name, order_index AS "order", icon
+      `SELECT id, tenantId AS "tenantId", name, order_index AS "order", icon,
+              customVariants AS "customVariants",
+              customAddons AS "customAddons",
+              customFlags AS "customFlags"
        FROM categories WHERE tenantId=$1 ORDER BY order_index`,
       [user.tenantId],
     );
@@ -661,7 +664,10 @@ async function route(request, method, segments) {
     const { user, error } = await requireAuth(request);
     if (error) return error;
     const { rows: categories } = await db.query(
-      `SELECT id, tenantId AS "tenantId", name, order_index AS "order", icon
+      `SELECT id, tenantId AS "tenantId", name, order_index AS "order", icon,
+              customVariants AS "customVariants",
+              customAddons AS "customAddons",
+              customFlags AS "customFlags"
        FROM categories WHERE tenantId=$1 ORDER BY order_index`,
       [user.tenantId],
     );
@@ -676,7 +682,7 @@ async function route(request, method, segments) {
     ]);
     if (error) return error;
     const body = await request.json();
-    const { name, icon } = body;
+    const { name, icon, customVariants, customAddons, customFlags } = body;
     if (!name) return err("Missing category name");
     const { rows } = await db.query(
       `SELECT COALESCE(MAX(order_index),0)+1 AS next_order FROM categories WHERE tenantId=$1`,
@@ -685,11 +691,21 @@ async function route(request, method, segments) {
     const order_index = rows[0].next_order;
     const id = uuid();
     await db.query(
-      `INSERT INTO categories (id, tenantId, name, order_index, icon) VALUES ($1,$2,$3,$4,$5)`,
-      [id, user.tenantId, name, order_index, icon || null],
+      `INSERT INTO categories (id, tenantId, name, order_index, icon, customVariants, customAddons, customFlags)
+       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb)`,
+      [
+        id, user.tenantId, name, order_index, icon || null,
+        JSON.stringify(customVariants || []),
+        JSON.stringify(customAddons || []),
+        JSON.stringify(customFlags || {}),
+      ],
     );
     const { rows: catRows } = await db.query(
-      `SELECT id, tenantId AS "tenantId", name, order_index AS "order", icon FROM categories WHERE id=$1`,
+      `SELECT id, tenantId AS "tenantId", name, order_index AS "order", icon,
+              customVariants AS "customVariants",
+              customAddons AS "customAddons",
+              customFlags AS "customFlags"
+       FROM categories WHERE id=$1`,
       [id],
     );
     return json({ category: catRows[0] });
@@ -710,16 +726,28 @@ async function route(request, method, segments) {
 
     if (method === "PUT") {
       const body = await request.json();
-      const allowed = ["name", "icon", "order_index"];
-      const { set, values } = buildUpdate(body, allowed);
-      if (set.length) {
+      // Manual update to handle jsonb columns properly
+      const setParts = [];
+      const values = [];
+      let idx = 1;
+      if (body.name !== undefined) { setParts.push(`name=$${idx++}`); values.push(body.name); }
+      if (body.icon !== undefined) { setParts.push(`icon=$${idx++}`); values.push(body.icon); }
+      if (body.order_index !== undefined) { setParts.push(`order_index=$${idx++}`); values.push(body.order_index); }
+      if (body.customVariants !== undefined) { setParts.push(`customVariants=$${idx++}::jsonb`); values.push(JSON.stringify(body.customVariants)); }
+      if (body.customAddons !== undefined) { setParts.push(`customAddons=$${idx++}::jsonb`); values.push(JSON.stringify(body.customAddons)); }
+      if (body.customFlags !== undefined) { setParts.push(`customFlags=$${idx++}::jsonb`); values.push(JSON.stringify(body.customFlags)); }
+      if (setParts.length) {
         await db.query(
-          `UPDATE categories SET ${set.join(", ")} WHERE id=$${values.length + 1} AND tenantId=$${values.length + 2}`,
+          `UPDATE categories SET ${setParts.join(", ")} WHERE id=$${idx} AND tenantId=$${idx+1}`,
           [...values, cid, user.tenantId],
         );
       }
       const { rows: updated } = await db.query(
-        `SELECT id, tenantId AS "tenantId", name, order_index AS "order", icon FROM categories WHERE id=$1`,
+        `SELECT id, tenantId AS "tenantId", name, order_index AS "order", icon,
+                customVariants AS "customVariants",
+                customAddons AS "customAddons",
+                customFlags AS "customFlags"
+         FROM categories WHERE id=$1`,
         [cid],
       );
       return json({ category: updated[0] });
