@@ -303,6 +303,48 @@ backend_delta:
              - categories table has customVariants (jsonb), customAddons (jsonb), customFlags (jsonb)
              - All columns have correct data types and default values ('[]', '[]', '{}')
              - ALTER TABLE ADD COLUMN IF NOT EXISTS applied successfully on startup
+
+# === Iteration: Responsive sidebar + Conditional product form ===
+
+frontend_delta:
+  - task: "Responsive admin sidebar (fixed → off-canvas on mobile)"
+    file: "/app/app/admin/layout.js"
+    change: |
+      * Desktop (lg+): sidebar is fixed-width 264px on the left, main content
+        uses lg:ml-64 to avoid overlap.
+      * Below lg breakpoint: sidebar is a translated-off drawer (translate-x-full).
+        A mobile top bar (sticky h-14) shows a hamburger button; opening slides the
+        sidebar in with a black/40 backdrop-blur backdrop. Clicking backdrop or the
+        X in the sidebar closes it. Body scroll locked while open. Sidebar
+        auto-closes on route change (usePathname effect).
+      * Main <main> has p-4 sm:p-6 and overflow-x-hidden to prevent horizontal
+        scrolling and content overlap.
+    needs_retesting: true
+
+  - task: "Conditional product form fields (schemaFor(category))"
+    file: "/app/app/admin/products/page.js"
+    change: |
+      New Product / Edit Product dialog now looks at the selected category and
+      only renders the optional editors that category has configured:
+
+        schema.showEggOption   ← category.customFlags.isEggOption === true
+        schema.showCakeMessage ← category.customFlags.allowCakeMessage === true
+        schema.showVariants    ← category.customVariants length > 0
+        schema.showAddons      ← category.customAddons length > 0
+
+      When a category has no custom config, only the standard fields (name,
+      description, price, discount, images, badges, availability) are shown, and
+      a small helper text explains "no custom options".
+
+      For inherited variants/add-ons the option LABELS and add-on NAMES come from
+      the category (read-only in the product form). Only the per-product ₹
+      priceDelta / price fields remain editable per product.
+
+      On save, the payload strips any variants/addons/flags NOT in the category
+      schema — so removing an eggless toggle at the category level cleanly wipes
+      it from products in that category the next time they're saved.
+    needs_retesting: true
+
           
           2. ✅ POST /api/admin/categories with custom fields:
              - Created category "Test Custom Cakes" with:
