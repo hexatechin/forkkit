@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { ArrowRight, Sparkles, MessageCircle, Rocket, Store, Zap, Shield, Cake, Flower2, UtensilsCrossed, Gift, ChefHat } from 'lucide-react'
+import { ArrowRight, Sparkles, MessageCircle, Rocket, Store, Zap, Shield, Cake, Flower2, UtensilsCrossed, Gift, ChefHat, Briefcase } from 'lucide-react'
 
 export default function Landing() {
   const [tenants, setTenants] = useState([])
@@ -21,6 +21,7 @@ export default function Landing() {
     { icon: Gift, label: 'Gift shops' },
     { icon: UtensilsCrossed, label: 'Tiffin services' },
     { icon: Store, label: 'Cloud kitchens' },
+    { icon: Briefcase, label: 'Coworking spaces' },
   ]
 
   return (

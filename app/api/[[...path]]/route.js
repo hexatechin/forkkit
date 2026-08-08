@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
 import { seedIfEmpty } from '@/lib/seed'
 import { signToken, verifyToken, hashPassword, verifyPassword, extractToken } from '@/lib/auth'
+import { TEMPLATES, buildStarter } from '@/lib/templates'
 import { v4 as uuid } from 'uuid'
 
 const json = (data, status=200) => NextResponse.json(data, { status })
@@ -41,15 +42,9 @@ async function route(request, method, segments) {
     let slug = baseSlug; let n = 1
     while (await db.collection('tenants').findOne({ slug })) { n++; slug = `${baseSlug}-${n}` }
 
-    const TEMPLATE_THEMES = {
-      bakery: { primary:'#a0522d', accent:'#d4a373', tint:'#fdf6ec', banner:'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=1600&q=80', cats:[['Cakes','\ud83c\udf82'],['Pastries','\ud83e\udd50'],['Breads','\ud83c\udf5e'],['Cookies','\ud83c\udf6a']] },
-      home_baker: { primary:'#c2410c', accent:'#fed7aa', tint:'#fff7ed', banner:'https://images.unsplash.com/photo-1587244141541-6b3e5b8b0ba1?w=1600&q=80', cats:[['Custom Cakes','\ud83c\udf82'],['Cupcakes','\ud83e\uddc1'],['Desserts','\ud83c\udf6e']] },
-      florist:   { primary:'#be185d', accent:'#fbcfe8', tint:'#fdf2f8', banner:'https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=1600&q=80', cats:[['Bouquets','\ud83d\udc90'],['Arrangements','\ud83c\udf37'],['Occasions','\ud83c\udf39']] },
-      gift_shop: { primary:'#7c3aed', accent:'#ddd6fe', tint:'#faf5ff', banner:'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1600&q=80', cats:[['Gifts','\ud83c\udf81'],['Hampers','\ud83c\udf93'],['Personalized','\u2728']] },
-      tiffin:    { primary:'#065f46', accent:'#a7f3d0', tint:'#ecfdf5', banner:'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1600&q=80', cats:[['Lunch','\ud83c\udf5b'],['Dinner','\ud83c\udf5d'],['Snacks','\ud83e\udd6a'],['Combos','\ud83c\udf7d\ufe0f']] },
-      cloud_kitchen:{ primary:'#0f766e', accent:'#99f6e4', tint:'#f0fdfa', banner:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1600&q=80', cats:[['Mains','\ud83c\udf5d'],['Starters','\ud83c\udf62'],['Desserts','\ud83c\udf70'],['Drinks','\ud83e\uddcb']] },
-    }
-    const theme = TEMPLATE_THEMES[template] || TEMPLATE_THEMES.bakery
+    const TEMPLATE_THEMES = TEMPLATES
+    const themeCfg = buildStarter(template)
+    const theme = { primary: themeCfg.theme.primaryColor, accent: themeCfg.theme.accentColor, tint: themeCfg.theme.bgTint, banner: themeCfg.theme.banner }
 
     const tenantId = uuid()
     await db.collection('tenants').insertOne({
@@ -64,8 +59,21 @@ async function route(request, method, segments) {
       template,
       createdAt: new Date().toISOString(),
     })
-    const cats = theme.cats.map(([name, icon], i) => ({ id: uuid(), tenantId, name, order: i+1, icon }))
-    await db.collection('categories').insertMany(cats)
+    const catDocs = themeCfg.categories.map((c, i) => ({ id: uuid(), tenantId, name: c.name, order: i+1, icon: c.icon }))
+    await db.collection('categories').insertMany(catDocs)
+
+    // Starter products
+    const catIdByName = Object.fromEntries(catDocs.map(c => [c.name, c.id]))
+    const prodDocs = (themeCfg.products || []).map(p => ({
+      id: uuid(), tenantId, categoryId: catIdByName[p.cat],
+      name: p.name, description: p.description || '', images: p.images || [],
+      price: p.price, discountPrice: p.discountPrice || null,
+      rating: p.rating || null, badges: p.badges || [], available: true,
+      isEggOption: !!p.isEggOption, allowCakeMessage: !!p.allowCakeMessage,
+      variants: (p.variants||[]).map(v => ({ id: uuid(), name: v.name, options: v.options })),
+      addons: (p.addons||[]).map(a => ({ id: uuid(), name: a.name, price: a.price })),
+    })).filter(p => p.categoryId)
+    if (prodDocs.length) await db.collection('products').insertMany(prodDocs)
 
     const userId = uuid()
     await db.collection('users').insertOne({ id: userId, tenantId, email: emailLc, passwordHash: hashPassword(password), name: ownerName, role: 'owner' })

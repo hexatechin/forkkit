@@ -8,15 +8,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { Cake, ChefHat, Flower2, Gift, UtensilsCrossed, Store, ArrowRight, ArrowLeft, Check } from 'lucide-react'
+import { Cake, ChefHat, Flower2, Gift, UtensilsCrossed, Store, Briefcase, ArrowRight, ArrowLeft, Check } from 'lucide-react'
 
 const TEMPLATES = [
   { id: 'bakery', label: 'Bakery', icon: Cake, color: '#a0522d', accent: '#d4a373', tint: '#fdf6ec' },
   { id: 'home_baker', label: 'Home baker', icon: ChefHat, color: '#c2410c', accent: '#fed7aa', tint: '#fff7ed' },
-  { id: 'florist', label: 'Florist', icon: Flower2, color: '#be185d', accent: '#fbcfe8', tint: '#fdf2f8' },
+  { id: 'florist', label: 'Florist', icon: Flower2, color: '#db2777', accent: '#fbcfe8', tint: '#fdf2f8' },
   { id: 'gift_shop', label: 'Gift shop', icon: Gift, color: '#7c3aed', accent: '#ddd6fe', tint: '#faf5ff' },
   { id: 'tiffin', label: 'Tiffin service', icon: UtensilsCrossed, color: '#065f46', accent: '#a7f3d0', tint: '#ecfdf5' },
   { id: 'cloud_kitchen', label: 'Cloud kitchen', icon: Store, color: '#0f766e', accent: '#99f6e4', tint: '#f0fdfa' },
+  { id: 'office_space', label: 'Office space', icon: Briefcase, color: '#1e40af', accent: '#bfdbfe', tint: '#eff6ff' },
 ]
 
 export default function SignupPage() {
