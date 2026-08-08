@@ -137,11 +137,11 @@ backend:
 
   - task: "Seed endpoint on Postgres"
     implemented: true
-    working: false
+    working: true
     file: "/app/lib/seed.js, /app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -158,6 +158,14 @@ backend:
           not check if tenants already exist before attempting INSERT. It should
           query for existing tenants first and return {seeded: false} if they exist.
           Fix needed at line 77-106 in seed.js: add SELECT check before INSERT.
+      - working: true
+        agent: "testing"
+        comment: |
+          VERIFIED: Seed idempotency fix working correctly. Added SELECT guard at
+          lines 19-24 in /app/lib/seed.js checks for existing 'royalbakery' tenant
+          before attempting INSERT. Both first and second calls return 200. Second
+          call correctly returns {seeded: false, message: "already seeded"} with no
+          500 error. Idempotency fully functional.
 
   - task: "Signup + starter template provisioning"
     implemented: true
@@ -211,11 +219,11 @@ backend:
 
   - task: "Checkout + WhatsApp URL generation (INR)"
     implemented: true
-    working: false
+    working: true
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -236,6 +244,21 @@ backend:
           4. No Indian locale formatting - should use comma for thousands (₹1,199)
              and no decimals for whole rupees, not .toFixed(2)
           Order creation works, but WhatsApp message format is completely wrong.
+      - working: true
+        agent: "testing"
+        comment: |
+          VERIFIED: All checkout INR formatting fixes working correctly.
+          1. WhatsApp URL now contains valid phone number (https://wa.me/15551234567)
+             - Fixed by adding AS "whatsappNumber" alias at line 436
+          2. Message uses ₹ symbol throughout (lines 492, 496, 497, 498)
+             - Replaced all $ with ₹ symbol
+          3. Indian locale formatting working: amounts >= 1000 show comma separator
+             - Tested with ₹1,024 and ₹1,029 - both display correctly
+             - Uses .toLocaleString("en-IN") for proper formatting
+          4. Minimum order error correctly shows "Minimum order is ₹250" (line 448)
+             - Fixed by adding ₹ symbol to error message
+          Order creation, WhatsApp message generation, and min-order enforcement
+          all working correctly with proper INR formatting.
 
   - task: "Admin authenticated endpoints"
     implemented: true
@@ -282,14 +305,12 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.2"
-  test_sequence: 2
+  version: "1.3"
+  test_sequence: 3
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Seed endpoint on Postgres"
-    - "Checkout + WhatsApp URL generation (INR)"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -367,3 +388,45 @@ agent_communication:
       "*Total:* *₹64*"
       
       For amounts >= 1000, use comma separator: ₹1,199
+
+
+  - agent: "testing"
+    message: |
+      RE-VERIFICATION COMPLETE - ALL FIXES WORKING ✅
+      
+      Tested the two specific fixes as requested:
+      
+      1. ✅ SEED IDEMPOTENCY (/app/lib/seed.js lines 19-24):
+         - Added SELECT guard: "SELECT 1 FROM tenants WHERE slug='royalbakery'"
+         - First call: Returns 200 with {seeded: false, message: "already seeded"}
+         - Second call: Returns 200 with {seeded: false, message: "already seeded"}
+         - NO 500 errors, fully idempotent
+      
+      2. ✅ CHECKOUT INR FORMATTING (/app/app/api/[[...path]]/route.js):
+         a) Line 436: Added AS "whatsappNumber" alias
+            - WhatsApp URL now: https://wa.me/15551234567 (not wa.me/undefined)
+         
+         b) Line 448: Minimum order error now shows "Minimum order is ₹250"
+            - Tested with order below minimum, correctly returns 400 with ₹ symbol
+         
+         c) Lines 492, 496, 497, 498: All use ₹ with .toLocaleString("en-IN")
+            - Tested with order of ₹1,024: displays as "₹1,024" (comma separator)
+            - Tested with order of ₹256: displays as "₹256" (no comma needed)
+            - WhatsApp message format verified:
+              "• 32 × Classic Chocolate Cake — ₹1,024"
+              "*Subtotal:* ₹1,024"
+              "*Delivery:* ₹5"
+              "*Total:* *₹1,029*"
+      
+      3. ✅ REGRESSION TESTS - All previously passing scenarios still working:
+         - GET /api/tenants (returns 16 tenants)
+         - GET /api/tenant/:slug (returns tenant with categories and products)
+         - POST /api/admin/login (authentication working)
+         - GET /api/admin/me (protected endpoint working)
+         - GET /api/admin/products (CRUD operations working)
+         - GET /api/admin/orders (orders endpoint working)
+         - GET /api/admin/analytics (7 days of data)
+         - Multi-tenant isolation (no data leaks)
+      
+      ALL BACKEND TESTS PASSING. Both fixes verified and working correctly.
+      No regressions detected.

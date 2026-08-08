@@ -430,7 +430,11 @@ async function route(request, method, segments) {
       return err("missing required fields");
 
     const { rows: tenantRows } = await db.query(
-      "SELECT id, name, deliveryFee, minOrder, whatsappNumber FROM tenants WHERE slug=$1",
+      `SELECT id, name,
+              deliveryFee AS "deliveryFee",
+              minOrder AS "minOrder",
+              whatsappNumber AS "whatsappNumber"
+       FROM tenants WHERE slug=$1`,
       [tenantSlug],
     );
     const tenant = tenantRows[0];
@@ -441,7 +445,7 @@ async function route(request, method, segments) {
     const total = subtotal + deliveryFee;
 
     if (total < (tenant.minOrder || 0))
-      return err(`Minimum order is ${tenant.minOrder}`);
+      return err(`Minimum order is ₹${tenant.minOrder}`);
 
     const orderId = uuid();
     await db.query(
@@ -485,13 +489,13 @@ async function route(request, method, segments) {
       if (i.variantLabel) opts.push(i.variantLabel);
       if (i.eggChoice) opts.push(i.eggChoice);
       if (i.addons?.length) opts.push(i.addons.map((a) => a.name).join(", "));
-      const line = `  • ${i.qty} × ${i.name}${opts.length ? " (" + opts.join(" | ") + ")" : ""} — $${(i.unitPrice * i.qty).toFixed(2)}`;
+      const line = `  • ${i.qty} × ${i.name}${opts.length ? " (" + opts.join(" | ") + ")" : ""} — ₹${(i.unitPrice * i.qty).toLocaleString("en-IN")}`;
       lines.push(line);
     });
     lines.push("");
-    lines.push(`*Subtotal:* $${subtotal.toFixed(2)}`);
-    if (deliveryFee) lines.push(`*Delivery:* $${deliveryFee.toFixed(2)}`);
-    lines.push(`*Total:* *$${total.toFixed(2)}*`);
+    lines.push(`*Subtotal:* ₹${subtotal.toLocaleString("en-IN")}`);
+    if (deliveryFee) lines.push(`*Delivery:* ₹${deliveryFee.toLocaleString("en-IN")}`);
+    lines.push(`*Total:* *₹${total.toLocaleString("en-IN")}*`);
     if (notes) {
       lines.push("");
       lines.push(`*Notes:* ${notes}`);
