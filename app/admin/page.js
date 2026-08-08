@@ -4,9 +4,11 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Package, ClipboardList, DollarSign, Users, Copy, Share2, ExternalLink, MessageCircle, X, Sparkles } from 'lucide-react'
+import { Package, ClipboardList, IndianRupee, Users, Copy, Share2, ExternalLink, MessageCircle, X, Sparkles } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, CartesianGrid } from 'recharts'
 import { toast } from 'sonner'
+
+const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`
 
 export default function AdminDashboard() {
   const params = useSearchParams()
@@ -18,7 +20,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (params.get('welcome')) setShowWelcome(true)
-    const t = localStorage.getItem('forkkit-token')
+    const t = localStorage.getItem('kirano-token')
     Promise.all([
       fetch('/api/admin/products', { headers: { Authorization: `Bearer ${t}` }}).then(r=>r.json()),
       fetch('/api/admin/orders', { headers: { Authorization: `Bearer ${t}` }}).then(r=>r.json()),
@@ -43,7 +45,6 @@ export default function AdminDashboard() {
 
   const storefrontUrl = tenant ? `${typeof window!=='undefined' ? window.location.origin : ''}/t/${tenant.slug}` : ''
   const qrUrl = storefrontUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(storefrontUrl)}` : ''
-
   const copyLink = () => { navigator.clipboard.writeText(storefrontUrl); toast.success('Link copied') }
   const shareWA = () => window.open(`https://wa.me/?text=${encodeURIComponent(`Order from ${tenant.name}: ${storefrontUrl}`)}`, '_blank')
 
@@ -56,7 +57,7 @@ export default function AdminDashboard() {
             <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center text-white"><Sparkles className="h-5 w-5"/></div>
             <div>
               <div className="font-bold text-lg">Your storefront is live! 🎉</div>
-              <div className="text-sm text-muted-foreground">Next steps: add your first products, then share your link on Instagram bio / Google profile / WhatsApp status.</div>
+              <div className="text-sm text-muted-foreground">Next steps: add products, then share your link on Instagram bio / Google profile / WhatsApp status.</div>
               <div className="mt-3 flex gap-2">
                 <Link href="/admin/products"><Button size="sm" className="bg-gradient-to-r from-orange-500 to-rose-500">Add products</Button></Link>
                 <Link href="/admin/settings"><Button size="sm" variant="outline">Customize branding</Button></Link>
@@ -72,15 +73,14 @@ export default function AdminDashboard() {
       <div className="grid gap-4 md:grid-cols-4 mb-6">
         <Stat icon={Package} label="Products" value={stats.products} color="bg-blue-500" />
         <Stat icon={ClipboardList} label="Orders" value={stats.orders} color="bg-orange-500" />
-        <Stat icon={DollarSign} label="Revenue" value={`$${stats.revenue.toFixed(2)}`} color="bg-green-500" />
+        <Stat icon={IndianRupee} label="Revenue" value={inr(stats.revenue)} color="bg-green-500" />
         <Stat icon={Users} label="Categories" value={stats.categories} color="bg-rose-500" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3 mb-6">
-        {/* Share widget */}
         <Card className="p-5 lg:col-span-1">
           <h3 className="font-bold flex items-center gap-2"><Share2 className="h-4 w-4"/>Share your storefront</h3>
-          <p className="text-xs text-muted-foreground mt-1">Add to your Instagram bio, Google profile, or send directly to customers.</p>
+          <p className="text-xs text-muted-foreground mt-1">Add to Instagram bio, Google profile, or share directly with customers.</p>
           {tenant && (
             <div className="mt-4 space-y-3">
               <div className="rounded-lg border p-3 bg-neutral-50 text-xs break-all font-mono">{storefrontUrl}</div>
@@ -91,15 +91,12 @@ export default function AdminDashboard() {
               <Link href={`/t/${tenant.slug}`} target="_blank" className="block">
                 <Button size="sm" variant="ghost" className="w-full"><ExternalLink className="h-3.5 w-3.5 mr-1"/>Open storefront</Button>
               </Link>
-              <div className="flex justify-center pt-2">
-                <img src={qrUrl} alt="QR" className="rounded-lg border" />
-              </div>
+              <div className="flex justify-center pt-2"><img src={qrUrl} alt="QR" className="rounded-lg border" /></div>
               <p className="text-xs text-muted-foreground text-center">Print this QR for your shop counter</p>
             </div>
           )}
         </Card>
 
-        {/* Trends chart */}
         <Card className="p-5 lg:col-span-2">
           <h3 className="font-bold mb-1">Last 7 days</h3>
           <p className="text-xs text-muted-foreground mb-4">Orders & revenue trend</p>
@@ -111,7 +108,7 @@ export default function AdminDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
                 <XAxis dataKey="date" fontSize={11} />
                 <YAxis fontSize={11}/>
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }}/>
+                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v, name)=> name==='revenue' ? inr(v) : v}/>
                 <Line type="monotone" dataKey="orders" stroke="#f97316" strokeWidth={2} dot={{r:4}} />
                 <Line type="monotone" dataKey="revenue" stroke="#059669" strokeWidth={2} dot={{r:4}} />
               </LineChart>
@@ -145,7 +142,7 @@ export default function AdminDashboard() {
                     <div className="font-medium text-sm">{o.customer.name} <span className="text-xs text-muted-foreground">· {o.mode}</span></div>
                     <div className="text-xs text-muted-foreground">{new Date(o.createdAt).toLocaleString()}</div>
                   </div>
-                  <div className="font-bold text-sm">${o.total.toFixed(2)}</div>
+                  <div className="font-bold text-sm">{inr(o.total)}</div>
                 </div>
               ))}
             </div>

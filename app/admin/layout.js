@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Package, ClipboardList, Settings, LogOut, Store, Menu } from 'lucide-react'
+import { LayoutDashboard, Package, ClipboardList, Settings, LogOut, Store } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function AdminLayout({ children }) {
@@ -14,10 +14,10 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => {
     if (pathname === '/admin/login') { setReady(true); return }
-    const t = typeof window!=='undefined' ? localStorage.getItem('forkkit-token') : null
+    const t = typeof window!=='undefined' ? localStorage.getItem('kirano-token') : null
     if (!t) { router.replace('/admin/login'); return }
     fetch('/api/admin/me', { headers: { Authorization: `Bearer ${t}` }}).then(async r => {
-      if (!r.ok) { localStorage.removeItem('forkkit-token'); router.replace('/admin/login'); return }
+      if (!r.ok) { localStorage.removeItem('kirano-token'); router.replace('/admin/login'); return }
       const d = await r.json(); setUser(d.user); setTenant(d.tenant); setReady(true)
     })
   }, [pathname])
@@ -36,8 +36,8 @@ export default function AdminLayout({ children }) {
     <div className="min-h-screen flex bg-neutral-50">
       <aside className="w-64 bg-white border-r p-4 flex flex-col">
         <div className="flex items-center gap-2 font-bold mb-6 px-2">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-rose-500 text-white">🍴</span>
-          ForkKit
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white shadow">K</span>
+          Kirano
         </div>
         <nav className="space-y-1 flex-1">
           <NavItem href="/admin" icon={LayoutDashboard}>Dashboard</NavItem>

@@ -45,9 +45,9 @@ export default function SignupPage() {
       const res = await fetch('/api/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(f) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Signup failed')
-      localStorage.setItem('forkkit-token', data.token)
-      localStorage.setItem('forkkit-user', JSON.stringify(data.user))
-      localStorage.setItem('forkkit-tenant', JSON.stringify(data.tenant))
+      localStorage.setItem('kirano-token', data.token)
+      localStorage.setItem('kirano-user', JSON.stringify(data.user))
+      localStorage.setItem('kirano-tenant', JSON.stringify(data.tenant))
       toast.success('Storefront created 🎉')
       router.push('/admin?welcome=1')
     } catch(e){ toast.error(e.message) } finally { setLoading(false) }
@@ -58,7 +58,7 @@ export default function SignupPage() {
       <div className="container mx-auto max-w-2xl py-8">
         <Link href="/" className="text-xs text-muted-foreground hover:underline">← Back home</Link>
         <div className="mt-4 mb-6 text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 text-white text-2xl">🍴</div>
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white text-xl font-black shadow-lg">K</div>
           <h1 className="mt-3 text-3xl font-black">Create your storefront</h1>
           <p className="text-sm text-muted-foreground">Step {step} of 3</p>
         </div>

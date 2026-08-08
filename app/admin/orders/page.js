@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
+const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState([])
   useEffect(() => {
-    const t = localStorage.getItem('forkkit-token')
+    const t = localStorage.getItem('kirano-token')
     fetch('/api/admin/orders', { headers: { Authorization: `Bearer ${t}` }}).then(r=>r.json()).then(d=>setOrders(d.orders||[]))
   }, [])
 
@@ -25,14 +27,14 @@ export default function AdminOrders() {
                 <div className="flex items-center gap-2">
                   <Badge>{o.mode}</Badge>
                   <Badge variant="outline">{o.status}</Badge>
-                  <div className="font-bold text-lg">${o.total.toFixed(2)}</div>
+                  <div className="font-bold text-lg">{inr(o.total)}</div>
                 </div>
               </div>
               <div className="mt-3 text-sm">
                 {o.items.map((i, idx) => (
                   <div key={idx} className="flex justify-between border-t pt-2">
                     <div>{i.qty} × {i.name}{i.variantLabel ? ` (${i.variantLabel})` : ''}</div>
-                    <div>${(i.unitPrice*i.qty).toFixed(2)}</div>
+                    <div>{inr(i.unitPrice*i.qty)}</div>
                   </div>
                 ))}
               </div>

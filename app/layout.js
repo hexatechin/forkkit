@@ -3,8 +3,8 @@ import { Providers } from './providers'
 import { Toaster } from 'sonner'
 
 export const metadata = {
-  title: 'ForkKit — Multi-tenant Food Ordering SaaS',
-  description: 'Branded storefronts for restaurants, bakeries and cafés. Orders via WhatsApp.',
+  title: 'Kirano — Your shop, online in 60 seconds',
+  description: 'Beautiful storefronts for bakeries, florists, cafés, tiffin services and coworking spaces. Customers order via WhatsApp.',
 }
 
 export default function RootLayout({ children }) {

@@ -53,7 +53,7 @@ async function route(request, method, segments) {
       primaryColor: theme.primary, accentColor: theme.accent, bgTint: theme.tint,
       whatsappNumber, phone: phone || '', email: emailLc, address: address || '',
       businessHours: { open: '09:00', close: '21:00', days: 'Mon-Sun' },
-      deliveryFee: 0, minOrder: 0, prepTimeMins: 30,
+      deliveryFee: 40, minOrder: 199, prepTimeMins: 30,
       socialLinks: { instagram: '', facebook: '' },
       seoTitle: businessName, seoDesc: tagline || `Order from ${businessName}`,
       template,
@@ -138,7 +138,7 @@ async function route(request, method, segments) {
     const deliveryFee = mode === 'delivery' ? (tenant.deliveryFee || 0) : 0
     const total = subtotal + deliveryFee
 
-    if (total < (tenant.minOrder||0)) return err(`Minimum order is ${tenant.minOrder}`)
+    if (total < (tenant.minOrder||0)) return err(`Minimum order is ₹${tenant.minOrder}`)
 
     const orderId = uuid()
     const order = {
@@ -168,13 +168,13 @@ async function route(request, method, segments) {
       if (i.variantLabel) opts.push(i.variantLabel)
       if (i.eggChoice) opts.push(i.eggChoice)
       if (i.addons?.length) opts.push(i.addons.map(a=>a.name).join(', '))
-      const line = `  • ${i.qty} × ${i.name}${opts.length ? ' ('+opts.join(' | ')+')' : ''} — $${(i.unitPrice*i.qty).toFixed(2)}`
+      const line = `  • ${i.qty} × ${i.name}${opts.length ? ' ('+opts.join(' | ')+')' : ''} — ₹${(i.unitPrice*i.qty).toLocaleString('en-IN')}`
       lines.push(line)
     })
     lines.push('')
-    lines.push(`*Subtotal:* $${subtotal.toFixed(2)}`)
-    if (deliveryFee) lines.push(`*Delivery:* $${deliveryFee.toFixed(2)}`)
-    lines.push(`*Total:* *$${total.toFixed(2)}*`)
+    lines.push(`*Subtotal:* ₹${subtotal.toLocaleString('en-IN')}`)
+    if (deliveryFee) lines.push(`*Delivery:* ₹${deliveryFee.toLocaleString('en-IN')}`)
+    lines.push(`*Total:* *₹${total.toLocaleString('en-IN')}*`)
     if (notes) { lines.push(''); lines.push(`*Notes:* ${notes}`) }
 
     const message = lines.join('\n')

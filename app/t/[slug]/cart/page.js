@@ -12,6 +12,8 @@ import { Trash2, Minus, Plus, ArrowLeft, MessageCircle, ShoppingBag } from 'luci
 import { useCart } from '@/lib/cart-store'
 import { toast } from 'sonner'
 
+const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`
+
 export default function CartPage() {
   const { slug } = useParams()
   const [tenant, setTenantData] = useState(null)
@@ -20,9 +22,7 @@ export default function CartPage() {
   const [form, setForm] = useState({ name:'', phone:'', address:'', notes:'', occasion:'', scheduledAt:'' })
   const [placing, setPlacing] = useState(false)
 
-  useEffect(() => {
-    fetch(`/api/tenant/${slug}`).then(r=>r.json()).then(d=>setTenantData(d.tenant))
-  }, [slug])
+  useEffect(() => { fetch(`/api/tenant/${slug}`).then(r=>r.json()).then(d=>setTenantData(d.tenant)) }, [slug])
 
   if (!tenant) return <div className="p-10 text-center">Loading...</div>
 
@@ -35,11 +35,11 @@ export default function CartPage() {
     if (!items.length) return toast.error('Cart is empty')
     if (!form.name || !form.phone) return toast.error('Name and phone are required')
     if (mode === 'delivery' && !form.address) return toast.error('Delivery address is required')
-    if (belowMin) return toast.error(`Minimum order is $${tenant.minOrder}`)
+    if (belowMin) return toast.error(`Minimum order is ${inr(tenant.minOrder)}`)
     setPlacing(true)
     try {
       const res = await fetch('/api/checkout', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
+        method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           tenantSlug: slug,
           customer: { name: form.name, phone: form.phone, address: form.address },
@@ -53,9 +53,7 @@ export default function CartPage() {
       clear()
       toast.success('Order created! Opening WhatsApp...')
       window.location.href = data.whatsappUrl
-    } catch (e) {
-      toast.error(e.message)
-    } finally { setPlacing(false) }
+    } catch (e) { toast.error(e.message) } finally { setPlacing(false) }
   }
 
   return (
@@ -88,7 +86,7 @@ export default function CartPage() {
                           <span className="w-6 text-center text-sm font-bold">{i.qty}</span>
                           <button onClick={()=>updateQty(i.lineId, i.qty+1)}><Plus className="h-3.5 w-3.5"/></button>
                         </div>
-                        <div className="font-bold">${(i.unitPrice*i.qty).toFixed(2)}</div>
+                        <div className="font-bold">{inr(i.unitPrice*i.qty)}</div>
                       </div>
                     </div>
                     <button onClick={()=>removeItem(i.lineId)} className="self-start text-neutral-400 hover:text-red-500"><Trash2 className="h-4 w-4"/></button>
@@ -120,11 +118,11 @@ export default function CartPage() {
               <Card className="p-5 sticky top-4">
                 <h2 className="font-bold mb-3">Summary</h2>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                  <div className="flex justify-between text-muted-foreground"><span>{mode==='delivery' ? 'Delivery' : 'Pickup'}</span><span>${deliveryFee.toFixed(2)}</span></div>
-                  <div className="border-t pt-2 flex justify-between font-bold text-base"><span>Total</span><span>${total.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>Subtotal</span><span>{inr(subtotal)}</span></div>
+                  <div className="flex justify-between text-muted-foreground"><span>{mode==='delivery' ? 'Delivery' : 'Pickup'}</span><span>{inr(deliveryFee)}</span></div>
+                  <div className="border-t pt-2 flex justify-between font-bold text-base"><span>Total</span><span>{inr(total)}</span></div>
                 </div>
-                {belowMin && <div className="mt-3 text-xs text-red-600">Minimum order is ${tenant.minOrder}. Add more items.</div>}
+                {belowMin && <div className="mt-3 text-xs text-red-600">Minimum order is {inr(tenant.minOrder)}. Add more items.</div>}
                 <div className="mt-3 text-xs text-muted-foreground">Estimated ready in ~{tenant.prepTimeMins} min</div>
                 <Button disabled={placing || belowMin} onClick={placeOrder} className="w-full mt-4 h-12 font-semibold" style={{background: '#25D366', color:'white'}}>
                   <MessageCircle className="h-5 w-5 mr-2"/>Place order via WhatsApp

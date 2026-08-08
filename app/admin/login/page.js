@@ -21,9 +21,9 @@ export default function AdminLogin() {
       const res = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password })})
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Login failed')
-      localStorage.setItem('forkkit-token', data.token)
-      localStorage.setItem('forkkit-user', JSON.stringify(data.user))
-      localStorage.setItem('forkkit-tenant', JSON.stringify(data.tenant))
+      localStorage.setItem('kirano-token', data.token)
+      localStorage.setItem('kirano-user', JSON.stringify(data.user))
+      localStorage.setItem('kirano-tenant', JSON.stringify(data.tenant))
       toast.success(`Welcome, ${data.user.name}`)
       router.push('/admin')
     } catch (e) { toast.error(e.message) } finally { setLoading(false) }
@@ -34,8 +34,8 @@ export default function AdminLogin() {
       <Card className="w-full max-w-md p-8 shadow-xl">
         <Link href="/" className="text-xs text-muted-foreground">← Back home</Link>
         <div className="mt-4 mb-6 text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 text-white text-2xl">🍴</div>
-          <h1 className="mt-3 text-2xl font-bold">ForkKit Admin</h1>
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white text-xl font-black shadow-lg">K</div>
+          <h1 className="mt-3 text-2xl font-bold">Kirano Admin</h1>
           <p className="text-sm text-muted-foreground">Sign in to manage your storefront</p>
         </div>
         <form onSubmit={submit} className="space-y-4">

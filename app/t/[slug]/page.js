@@ -1,19 +1,20 @@
 'use client'
 import { useEffect, useState, useMemo, useRef } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Search, ShoppingBag, Star, Clock, MapPin, Phone, Instagram, Plus } from 'lucide-react'
 import { useCart } from '@/lib/cart-store'
 
+const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`
+
 export default function StorefrontPage() {
   const { slug } = useParams()
-  const router = useRouter()
   const [data, setData] = useState(null)
   const [q, setQ] = useState('')
   const [activeCat, setActiveCat] = useState(null)
@@ -40,20 +41,13 @@ export default function StorefrontPage() {
   if (!data) return (
     <div className="min-h-screen bg-neutral-50">
       <Skeleton className="h-72 w-full" />
-      <div className="container mx-auto p-6 space-y-4">
-        <Skeleton className="h-8 w-40" /><Skeleton className="h-32 w-full" /><Skeleton className="h-32 w-full" />
-      </div>
+      <div className="container mx-auto p-6 space-y-4"><Skeleton className="h-8 w-40"/><Skeleton className="h-32 w-full"/><Skeleton className="h-32 w-full"/></div>
     </div>
   )
 
   const t = data.tenant
   const totalItems = items.reduce((s,i)=>s+i.qty,0)
-
-  const scrollToCat = (cid) => {
-    setActiveCat(cid)
-    catRefs.current[cid]?.scrollIntoView({ behavior:'smooth', block:'start' })
-  }
-
+  const scrollToCat = (cid) => { setActiveCat(cid); catRefs.current[cid]?.scrollIntoView({ behavior:'smooth', block:'start' }) }
   const quickAdd = (p) => {
     const unitPrice = p.discountPrice || p.price
     addItem({ productId: p.id, name: p.name, image: p.images?.[0], qty: 1, unitPrice, variantLabel: null, eggChoice: null, addons: [] })
@@ -61,7 +55,6 @@ export default function StorefrontPage() {
 
   return (
     <div className="min-h-screen" style={{ background: t.bgTint || '#fafafa' }}>
-      {/* Banner */}
       <div className="relative h-64 md:h-80 w-full" style={{ backgroundImage: `url(${t.banner})`, backgroundSize:'cover', backgroundPosition:'center'}}>
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
         <div className="absolute top-4 left-4 right-4 flex justify-between">
@@ -83,21 +76,19 @@ export default function StorefrontPage() {
           </div>
           <div className="mt-3 flex flex-wrap gap-3 text-xs">
             <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1"><Clock className="h-3 w-3"/> {t.businessHours?.open}-{t.businessHours?.close}</span>
-            <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1"><MapPin className="h-3 w-3"/> {t.address}</span>
-            <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1"><Phone className="h-3 w-3"/> {t.phone}</span>
+            {t.address && <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1"><MapPin className="h-3 w-3"/> {t.address}</span>}
+            {t.phone && <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1"><Phone className="h-3 w-3"/> {t.phone}</span>}
           </div>
         </div>
       </div>
 
-      {/* Search */}
       <div className="container mx-auto px-4 -mt-6 relative z-10">
         <div className="bg-white rounded-2xl shadow-xl p-3 flex items-center gap-2">
           <Search className="h-5 w-5 text-neutral-400 ml-2" />
-          <Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search dishes, ingredients..." className="border-0 focus-visible:ring-0 shadow-none" />
+          <Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search products..." className="border-0 focus-visible:ring-0 shadow-none" />
         </div>
       </div>
 
-      {/* Sticky category nav */}
       <div className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b mt-6">
         <div className="container mx-auto px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar">
           {data.categories.map(c => (
@@ -110,9 +101,8 @@ export default function StorefrontPage() {
         </div>
       </div>
 
-      {/* Products by category */}
       <div className="container mx-auto px-4 py-8 space-y-10 pb-32">
-        {data.categories.map((c, ci) => {
+        {data.categories.map((c) => {
           const prods = filtered[c.id] || []
           if (!prods.length) return null
           return (
@@ -129,7 +119,7 @@ export default function StorefrontPage() {
                         </Link>
                         <div className="absolute top-2 left-2 flex gap-1">
                           {p.badges?.map(b => <Badge key={b} className="text-white" style={{background:t.primaryColor}}>{b}</Badge>)}
-                          {p.discountPrice && <Badge variant="destructive">Save ${(p.price-p.discountPrice).toFixed(0)}</Badge>}
+                          {p.discountPrice && <Badge variant="destructive">Save {inr(p.price-p.discountPrice)}</Badge>}
                         </div>
                         {!p.available && <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-semibold">Sold out</div>}
                       </div>
@@ -143,10 +133,10 @@ export default function StorefrontPage() {
                           <div>
                             {p.discountPrice ? (
                               <div className="flex items-baseline gap-2">
-                                <span className="font-bold">${p.discountPrice}</span>
-                                <span className="text-xs text-muted-foreground line-through">${p.price}</span>
+                                <span className="font-bold">{inr(p.discountPrice)}</span>
+                                <span className="text-xs text-muted-foreground line-through">{inr(p.price)}</span>
                               </div>
-                            ) : <span className="font-bold">${p.price}</span>}
+                            ) : <span className="font-bold">{inr(p.price)}</span>}
                           </div>
                           {(p.variants?.length || p.addons?.length || p.isEggOption) ? (
                             <Link href={`/t/${slug}/product/${p.id}`}>
@@ -169,7 +159,6 @@ export default function StorefrontPage() {
         })}
       </div>
 
-      {/* Floating cart bar */}
       {totalItems>0 && (
         <motion.div initial={{y:100}} animate={{y:0}} className="fixed bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-96 z-30">
           <Link href={`/t/${slug}/cart`}>
@@ -183,7 +172,7 @@ export default function StorefrontPage() {
 
       <footer className="border-t bg-white/60 py-8 text-center text-xs text-muted-foreground">
         {t.socialLinks?.instagram && <a href={t.socialLinks.instagram} className="inline-flex items-center gap-1 hover:underline"><Instagram className="h-3 w-3"/>Follow us</a>}
-        <div className="mt-2">Powered by ForkKit</div>
+        <div className="mt-2">Powered by Kirano</div>
       </footer>
 
       <style>{`.no-scrollbar::-webkit-scrollbar{display:none} .no-scrollbar{scrollbar-width:none}`}</style>

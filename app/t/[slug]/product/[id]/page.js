@@ -4,7 +4,6 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -12,12 +11,14 @@ import { Star, Minus, Plus, ArrowLeft, ShoppingBag } from 'lucide-react'
 import { useCart } from '@/lib/cart-store'
 import { toast } from 'sonner'
 
+const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`
+
 export default function ProductDetail() {
   const { slug, id } = useParams()
   const router = useRouter()
   const [data, setData] = useState(null)
   const [imgIdx, setImgIdx] = useState(0)
-  const [variantIdx, setVariantIdx] = useState({}) // by variantId
+  const [variantIdx, setVariantIdx] = useState({})
   const [eggChoice, setEggChoice] = useState('With egg')
   const [selectedAddons, setSelectedAddons] = useState({})
   const [cakeMsg, setCakeMsg] = useState('')
@@ -33,7 +34,6 @@ export default function ProductDetail() {
 
   if (!data?.product) return <div className="p-10 text-center">Loading...</div>
   const p = data.product; const t = data.tenant
-
   const base = p.discountPrice || p.price
   let variantDelta = 0
   const variantLabels = []
@@ -47,9 +47,7 @@ export default function ProductDetail() {
   const total = unitPrice * qty
 
   const addToCart = () => {
-    addItem({
-      productId: p.id, name: p.name, image: p.images?.[0],
-      qty, unitPrice,
+    addItem({ productId: p.id, name: p.name, image: p.images?.[0], qty, unitPrice,
       variantLabel: variantLabels.join(' | ') || null,
       eggChoice: p.isEggOption ? eggChoice : null,
       addons: addonsPicked.map(a => ({ name: a.name, price: a.price })),
@@ -65,7 +63,7 @@ export default function ProductDetail() {
         <Link href={`/t/${slug}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="h-4 w-4"/>Back to menu</Link>
         <div className="grid md:grid-cols-2 gap-8">
           <div>
-            <motion.div layoutId="img" className="aspect-square rounded-2xl overflow-hidden bg-white shadow">
+            <motion.div className="aspect-square rounded-2xl overflow-hidden bg-white shadow">
               <img src={p.images?.[imgIdx]} alt={p.name} className="h-full w-full object-cover" />
             </motion.div>
             {p.images?.length>1 && (
@@ -83,7 +81,7 @@ export default function ProductDetail() {
             <h1 className="text-3xl font-black">{p.name}</h1>
             {p.rating && <div className="mt-1 flex items-center gap-1 text-sm"><Star className="h-4 w-4 fill-yellow-500 text-yellow-500"/>{p.rating} rating</div>}
             <p className="mt-3 text-muted-foreground">{p.description}</p>
-            <div className="mt-4 text-2xl font-bold">${base.toFixed(2)}</div>
+            <div className="mt-4 text-2xl font-bold">{inr(base)}</div>
 
             {p.variants?.map(v => (
               <div key={v.id} className="mt-6">
@@ -93,7 +91,7 @@ export default function ProductDetail() {
                     <button key={i} onClick={()=>setVariantIdx({...variantIdx, [v.id]: i})}
                       className={`px-4 py-2 rounded-full border-2 text-sm transition ${variantIdx[v.id]===i ? 'text-white' : 'bg-white'}`}
                       style={variantIdx[v.id]===i ? {background: t.primaryColor, borderColor: t.primaryColor} : {}}>
-                      {o.label}{o.priceDelta ? ` (+$${o.priceDelta})` : ''}
+                      {o.label}{o.priceDelta ? ` (${o.priceDelta>0?'+':''}${inr(o.priceDelta)})` : ''}
                     </button>
                   ))}
                 </div>
@@ -123,7 +121,7 @@ export default function ProductDetail() {
                         <input type="checkbox" checked={!!selectedAddons[a.id]} onChange={e=>setSelectedAddons({...selectedAddons,[a.id]:e.target.checked})} />
                         <span>{a.name}</span>
                       </div>
-                      <span className="text-sm font-medium">+${a.price}</span>
+                      <span className="text-sm font-medium">+{inr(a.price)}</span>
                     </label>
                   ))}
                 </div>
@@ -132,8 +130,8 @@ export default function ProductDetail() {
 
             {p.allowCakeMessage && (
               <div className="mt-6">
-                <Label className="text-sm font-semibold">Message on cake (optional)</Label>
-                <Textarea value={cakeMsg} onChange={e=>setCakeMsg(e.target.value)} placeholder="e.g. Happy Birthday, Sam!" maxLength={40} className="mt-2" />
+                <Label className="text-sm font-semibold">Message on cake / card (optional)</Label>
+                <Textarea value={cakeMsg} onChange={e=>setCakeMsg(e.target.value)} placeholder="e.g. Happy Birthday, Aarav!" maxLength={40} className="mt-2" />
               </div>
             )}
 
@@ -144,7 +142,7 @@ export default function ProductDetail() {
                 <button onClick={()=>setQty(qty+1)} className="h-8 w-8 rounded-full hover:bg-neutral-100"><Plus className="h-4 w-4 mx-auto"/></button>
               </div>
               <Button className="flex-1 h-12 text-base font-semibold" style={{background: t.primaryColor, color:'white'}} onClick={addToCart}>
-                <ShoppingBag className="h-5 w-5 mr-2"/>Add to cart — ${total.toFixed(2)}
+                <ShoppingBag className="h-5 w-5 mr-2"/>Add to cart — {inr(total)}
               </Button>
             </div>
           </div>
