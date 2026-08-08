@@ -101,3 +101,269 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: |
+  User made local changes migrating the Kirano food-ordering SaaS from MongoDB to
+  Postgres. On this preview environment they hit build error:
+  "Module not found: Can't resolve 'pg'".
+  Fix so the app builds and all backend APIs work end-to-end on Postgres.
+
+backend:
+  - task: "Postgres adapter (lib/mongodb.js -> pg Pool + ensureSchema)"
+    implemented: true
+    working: true
+    file: "/app/lib/mongodb.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Installed `pg` (added to package.json). Restored user's pg-based mongodb.js
+          which exports getDb() (pg Pool) and ensureSchema() (creates tenants,
+          categories, products, users, orders tables). Reinstalled `mongodb` too
+          (was accidentally removed from package.json during migration) — it is
+          not imported anymore but kept for safety. Installed & started Postgres 15
+          locally (user=kirano, db=forkkit). Added DATABASE_URL to /app/.env.
+          Smoke test passed: /api/seed inserts 2 tenants; /api/tenants returns them;
+          /api/admin/login returns JWT.
+      - working: true
+        agent: "testing"
+        comment: |
+          TESTED: Postgres adapter working correctly. All queries execute successfully.
+          Schema creation works. Connection pooling functional. All endpoints that
+          interact with database are operational.
+
+  - task: "Seed endpoint on Postgres"
+    implemented: true
+    working: false
+    file: "/app/lib/seed.js, /app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Idempotent POST /api/seed should create Royal Bakery + Sunrise Café
+          with categories, products, and owner users. Verify a second call returns
+          {seeded:false}.
+      - working: false
+        agent: "testing"
+        comment: |
+          CRITICAL: Seed endpoint NOT idempotent. First call works (200), but second
+          call returns 500 with error "duplicate key value violates unique constraint
+          'tenants_slug_key'". The seedIfEmpty() function in /app/lib/seed.js does
+          not check if tenants already exist before attempting INSERT. It should
+          query for existing tenants first and return {seeded: false} if they exist.
+          Fix needed at line 77-106 in seed.js: add SELECT check before INSERT.
+
+  - task: "Signup + starter template provisioning"
+    implemented: true
+    working: true
+    file: "/app/app/api/[[...path]]/route.js, /app/lib/templates.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          POST /api/signup with {template, businessName, ownerName, email,
+          password, whatsappNumber} should create tenant + user + starter
+          categories + starter products for the chosen template, and return a JWT.
+          Test all 7 templates: bakery, home_baker, florist, gift_shop, tiffin,
+          cloud_kitchen, office_space.
+      - working: true
+        agent: "testing"
+        comment: |
+          TESTED: All 7 templates working correctly. Each creates tenant with unique
+          slug, correct primaryColor, starter categories and products. Tested: bakery
+          (4 cats, 6 prods), home_baker (3 cats, 3 prods), florist (4 cats, 8 prods),
+          gift_shop (3 cats, 3 prods), tiffin (4 cats, 3 prods), cloud_kitchen (4 cats,
+          3 prods), office_space (4 cats, 10 prods). Duplicate email returns 409.
+          Short password (<6 chars) returns 400. All validations working.
+
+  - task: "Public storefront endpoints"
+    implemented: true
+    working: true
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          GET /api/tenants (list) and GET /api/tenant/:slug (with categories +
+          products) and GET /api/tenant/:slug/product/:id. Verify JSON shape,
+          200 for known, 404 for unknown slug/product.
+      - working: true
+        agent: "testing"
+        comment: |
+          TESTED: All public storefront endpoints working. GET /api/tenants returns
+          2 tenants with all required fields (slug, name, primaryColor, banner, etc).
+          GET /api/tenant/royalbakery returns tenant with 4 categories and 6 products.
+          GET /api/tenant/:slug/product/:id returns product with minimal tenant info.
+          GET /api/tenant/nonexistent returns 404. GET /api/tenant/:slug/product/bad-id
+          returns 404. All JSON shapes correct.
+
+  - task: "Checkout + WhatsApp URL generation (INR)"
+    implemented: true
+    working: false
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          POST /api/checkout should create an order in Postgres and return a
+          wa.me URL containing an ₹-formatted message (₹ symbol + Indian
+          locale). Should also enforce min order.
+      - working: false
+        agent: "testing"
+        comment: |
+          CRITICAL: Checkout endpoint has multiple currency formatting issues:
+          1. WhatsApp message uses $ instead of ₹ symbol (lines 488, 492, 493, 494)
+          2. Minimum order error message shows "Minimum order is undefined" instead
+             of "Minimum order is ₹199" (line 444 missing ₹ symbol)
+          3. WhatsApp URL shows "wa.me/undefined" - whatsappNumber not retrieved
+             correctly. Line 433 query missing AS alias: should be
+             "whatsappNumber AS \"whatsappNumber\"" (see line 284 for correct pattern)
+          4. No Indian locale formatting - should use comma for thousands (₹1,199)
+             and no decimals for whole rupees, not .toFixed(2)
+          Order creation works, but WhatsApp message format is completely wrong.
+
+  - task: "Admin authenticated endpoints"
+    implemented: true
+    working: true
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Login (POST /api/admin/login), me (GET /api/admin/me), products CRUD
+          (GET/POST /api/admin/products, PUT/DELETE /api/admin/products/:id),
+          orders (GET /api/admin/orders), analytics (GET /api/admin/analytics),
+          tenant settings (PUT /api/admin/tenant). All must require Bearer JWT
+          and enforce tenantId scoping.
+      - working: true
+        agent: "testing"
+        comment: |
+          TESTED: All admin endpoints working correctly. Login returns JWT (200).
+          Bad password returns 401. GET /api/admin/me with token returns user+tenant
+          (200), without token returns 401. GET /api/admin/products returns products
+          and categories (200). POST /api/admin/products creates product (200).
+          PUT /api/admin/products/:id updates product (200), verified persistence.
+          DELETE /api/admin/products/:id deletes product (200). GET /api/admin/orders
+          returns orders (200). GET /api/admin/analytics returns 7 days of data with
+          top products and totals (200). PUT /api/admin/tenant updates settings (200),
+          verified persistence via public endpoint. Multi-tenant isolation verified:
+          Royal Bakery and Sunrise Cafe owners can only see their own products.
+
+frontend:
+  - task: "Frontend runs after Postgres migration"
+    implemented: true
+    working: "NA"
+    file: "/app/app/page.js and pages"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Frontend was not changed. Do not test unless explicitly asked."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.2"
+  test_sequence: 2
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Seed endpoint on Postgres"
+    - "Checkout + WhatsApp URL generation (INR)"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: |
+      Reported build error was: "Module not found: Can't resolve 'pg'".
+      Root cause: user migrated backend to Postgres locally (route.js + seed.js
+      + lib/mongodb.js all rewritten to use pg), but pushed to this preview
+      without (a) installing `pg`, (b) having a Postgres server available, and
+      (c) `mongodb` package was removed from package.json.
+
+      Fix applied:
+        1. yarn add pg (and mongodb back for safety).
+        2. Installed Postgres 15 in the container; created role `kirano`
+           (password: kirano) and database `forkkit`.
+        3. Set DATABASE_URL=postgresql://kirano:kirano@localhost:5432/forkkit
+           in /app/.env
+        4. Restored user's pg-based lib/mongodb.js (getDb + ensureSchema).
+        5. Restart nextjs; verified /api/seed, /api/tenants, /api/admin/login
+           all return 200 with expected JSON.
+
+      Please run the backend test suite covering the tasks in test_plan.
+      Base URL: use process.env.NEXT_PUBLIC_BASE_URL (external) or
+      http://localhost:3000 (internal). All API paths are prefixed with /api.
+      Demo credentials after seed: owner@royalbakery.com / password123
+      and owner@sunrisecafe.com / password123.
+
+  - agent: "testing"
+    message: |
+      BACKEND TESTING COMPLETE. Ran comprehensive test suite covering all 6 tasks.
+      
+      RESULTS:
+      ✅ Postgres adapter - Working correctly
+      ✅ Signup flow - All 7 templates working with correct validation
+      ✅ Public storefront - All endpoints returning correct data
+      ✅ Admin endpoints - Full CRUD, auth, analytics, multi-tenant isolation working
+      ❌ Seed endpoint - NOT idempotent (500 on second call)
+      ❌ Checkout - Multiple CRITICAL currency formatting issues
+      
+      CRITICAL ISSUES REQUIRING FIXES:
+      
+      1. SEED ENDPOINT (/app/lib/seed.js lines 77-106):
+         - Second call returns 500 with "duplicate key violates unique constraint"
+         - Missing check for existing data before INSERT
+         - Need to add SELECT query to check if tenants exist, return {seeded:false}
+      
+      2. CHECKOUT ENDPOINT (/app/app/api/[[...path]]/route.js):
+         a) Line 433: Missing AS alias for whatsappNumber
+            Current: "SELECT id, name, deliveryFee, minOrder, whatsappNumber FROM tenants"
+            Fix: "SELECT id, name, deliveryFee, minOrder, whatsappNumber AS \"whatsappNumber\" FROM tenants"
+         
+         b) Line 444: Minimum order error missing ₹ symbol
+            Current: return err(`Minimum order is ${tenant.minOrder}`);
+            Fix: return err(`Minimum order is ₹${tenant.minOrder}`);
+         
+         c) Lines 488, 492, 493, 494: All use $ instead of ₹
+            Line 488: — $${(i.unitPrice * i.qty).toFixed(2)}
+            Line 492: *Subtotal:* $${subtotal.toFixed(2)}
+            Line 493: *Delivery:* $${deliveryFee.toFixed(2)}
+            Line 494: *Total:* *$${total.toFixed(2)}*
+            
+            All should use ₹ symbol and Indian locale formatting (comma for thousands,
+            no decimals for whole rupees). Example: ₹1,199 not $1199.00
+      
+      Test results show WhatsApp message currently displays:
+      "• 2 × Classic Chocolate Cake — $64.00"
+      "*Subtotal:* $64.00"
+      "*Total:* *$64.00*"
+      
+      Should display:
+      "• 2 × Classic Chocolate Cake — ₹64"
+      "*Subtotal:* ₹64"
+      "*Total:* *₹64*"
+      
+      For amounts >= 1000, use comma separator: ₹1,199
