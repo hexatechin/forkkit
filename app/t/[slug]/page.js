@@ -1,123 +1,225 @@
-'use client'
-import { useEffect, useState, useMemo, useRef } from 'react'
-import { useParams } from 'next/navigation'
-import Link from 'next/link'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Search, ShoppingBag, Star, Clock, MapPin, Phone, Instagram, Plus, Facebook } from 'lucide-react'
-import { useCart } from '@/lib/cart-store'
+"use client";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Search,
+  ShoppingBag,
+  Star,
+  Clock,
+  MapPin,
+  Phone,
+  Instagram,
+  Plus,
+  Facebook,
+} from "lucide-react";
+import { useCart } from "@/lib/cart-store";
 
-const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`
+const inr = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
 
 const detectDiet = (product) => {
-  if (product.diet) return product.diet
-  const text = `${product.name || ""} ${product.description || ""}`.toLowerCase()
-  if (/non[- ]?veg|nonveg|non veg|chicken|mutton|fish|prawns|prawn|meat/.test(text)) return 'nonveg'
-  if (/veg|vegetarian|vegan|plant-based/.test(text)) return 'veg'
-  return 'all'
-}
+  if (product.diet) return product.diet;
+  const text =
+    `${product.name || ""} ${product.description || ""}`.toLowerCase();
+  if (
+    /non[- ]?veg|nonveg|non veg|chicken|mutton|fish|prawns|prawn|meat/.test(
+      text,
+    )
+  )
+    return "nonveg";
+  if (/veg|vegetarian|vegan|plant-based/.test(text)) return "veg";
+  return "all";
+};
 
-const getCategoryName = (product, categories) => categories?.find((c) => c.id === product.categoryId)?.name || ''
+const getCategoryName = (product, categories) =>
+  categories?.find((c) => c.id === product.categoryId)?.name || "";
 const getSizeLabel = (product) => {
-  const sizeVariant = (product.variants || []).find((v) => /size|weight/i.test(v.name)) || product.variants?.[0]
-  return sizeVariant?.options?.[0]?.label || null
-}
+  const sizeVariant =
+    (product.variants || []).find((v) => /size|weight/i.test(v.name)) ||
+    product.variants?.[0];
+  return sizeVariant?.options?.[0]?.label || null;
+};
 const getDiscountPercent = (product) => {
-  if (!product.discountPrice || !product.price) return null
-  return Math.round(100 - (product.discountPrice / product.price) * 100)
-}
+  if (!product.discountPrice || !product.price) return null;
+  return Math.round(100 - (product.discountPrice / product.price) * 100);
+};
 
 export default function StorefrontPage() {
-  const { slug } = useParams()
-  const [data, setData] = useState(null)
-  const [q, setQ] = useState('')
-  const [activeCat, setActiveCat] = useState(null)
-  const [dietFilter, setDietFilter] = useState('all')
-  const catRefs = useRef({})
-  const { items, setTenant, addItem } = useCart()
+  const { slug } = useParams();
+  const [data, setData] = useState(null);
+  const [q, setQ] = useState("");
+  const [activeCat, setActiveCat] = useState(null);
+  const [dietFilter, setDietFilter] = useState("all");
+  const catRefs = useRef({});
+  const { items, setTenant, addItem } = useCart();
 
   useEffect(() => {
-    fetch(`/api/tenant/${slug}`).then(r=>r.json()).then(d=>{
-      setData(d); setTenant(slug); if (d.categories?.[0]) setActiveCat(d.categories[0].id)
-    })
-  }, [slug])
+    fetch(`/api/tenant/${slug}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setData(d);
+        setTenant(slug);
+        if (d.categories?.[0]) setActiveCat(d.categories[0].id);
+      });
+  }, [slug]);
 
   const filtered = useMemo(() => {
-    if (!data) return {}
-    const byCat = {}
-    data.categories.forEach(c => byCat[c.id] = [])
-    data.products.forEach(p => {
-      if (q && !p.name.toLowerCase().includes(q.toLowerCase()) && !p.description?.toLowerCase().includes(q.toLowerCase())) return
-      const diet = detectDiet(p)
-      if (dietFilter === 'veg' && diet !== 'veg') return
-      if (dietFilter === 'nonveg' && diet !== 'nonveg') return
-      if (byCat[p.categoryId]) byCat[p.categoryId].push(p)
-    })
-    return byCat
-  }, [data, q, dietFilter])
+    if (!data) return {};
+    const byCat = {};
+    data.categories.forEach((c) => (byCat[c.id] = []));
+    data.products.forEach((p) => {
+      if (
+        q &&
+        !p.name.toLowerCase().includes(q.toLowerCase()) &&
+        !p.description?.toLowerCase().includes(q.toLowerCase())
+      )
+        return;
+      const diet = detectDiet(p);
+      if (dietFilter === "veg" && diet !== "veg") return;
+      if (dietFilter === "nonveg" && diet !== "nonveg") return;
+      if (byCat[p.categoryId]) byCat[p.categoryId].push(p);
+    });
+    return byCat;
+  }, [data, q, dietFilter]);
 
   const cartCounts = useMemo(() => {
     return items.reduce((acc, item) => {
-      acc[item.productId] = (acc[item.productId] || 0) + item.qty
-      return acc
-    }, {})
-  }, [items])
+      acc[item.productId] = (acc[item.productId] || 0) + item.qty;
+      return acc;
+    }, {});
+  }, [items]);
 
-  if (!data) return (
-    <div className="min-h-screen bg-neutral-50">
-      <Skeleton className="h-72 w-full" />
-      <div className="container mx-auto p-6 space-y-4"><Skeleton className="h-8 w-40"/><Skeleton className="h-32 w-full"/><Skeleton className="h-32 w-full"/></div>
-    </div>
-  )
+  if (!data)
+    return (
+      <div className="min-h-screen bg-neutral-50">
+        <Skeleton className="h-72 w-full" />
+        <div className="container mx-auto p-6 space-y-4">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </div>
+    );
 
-  const t = data.tenant
-  const totalItems = items.reduce((s,i)=>s+i.qty,0)
-  const scrollToCat = (cid) => { setActiveCat(cid); catRefs.current[cid]?.scrollIntoView({ behavior:'smooth', block:'start' }) }
+  const t = data.tenant;
+  const totalItems = items.reduce((s, i) => s + i.qty, 0);
+  const scrollToCat = (cid) => {
+    setActiveCat(cid);
+    catRefs.current[cid]?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
   const quickAdd = (p) => {
-    const unitPrice = p.discountPrice || p.price
-    addItem({ productId: p.id, name: p.name, image: p.images?.[0], qty: 1, unitPrice, variantLabel: null, addons: [] })
-  }
+    const unitPrice = p.discountPrice || p.price;
+    addItem({
+      productId: p.id,
+      name: p.name,
+      image: p.images?.[0],
+      qty: 1,
+      unitPrice,
+      variantLabel: null,
+      addons: [],
+    });
+  };
 
   return (
-    <div className="min-h-screen" style={{ background: t.bgTint || '#fafafa' }}>
-      <div className="relative h-64 md:h-80 w-full" style={{ backgroundImage: `url(${t.banner})`, backgroundSize:'cover', backgroundPosition:'center'}}>
+    <div
+      className="min-h-screen"
+      style={{ background: t.accentColor || "#fafafa" }}
+    >
+      <div
+        className="relative h-64 md:h-80 w-full"
+        style={{
+          backgroundImage: `url(${t.banner})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
         <div className="absolute top-4 left-4 right-4 flex justify-between items-center gap-3">
-          <Link href="/" className="text-white/90 text-sm bg-black/30 backdrop-blur rounded-full px-3 py-1 hover:bg-black/50">← All storefronts</Link>
+          <div className="flex flex-row gap-2">
+            <div className="flex items-center gap-3">
+              {t.logo && (
+                <img
+                  src={t.logo}
+                  alt={t.name}
+                  className="h-14 w-14 rounded-full border-2 border-white object-cover"
+                />
+              )}
+            </div>
+            <div>
+              <h1
+                className="text-3xl md:text-4xl font-black drop-shadow"
+                style={{ color: t.primaryColor }}
+              >
+                {t.name}
+              </h1>
+              <p className="text-sm md:text-base opacity-90 text-white">
+                {t.tagline}
+              </p>
+            </div>
+          </div>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 bg-white/90 rounded-full p-1 shadow-sm">
-              {['all','veg','nonveg'].map(filter => (
-                <button key={filter} onClick={() => setDietFilter(filter)}
-                  className={`whitespace-nowrap px-3 py-2 rounded-full text-sm font-medium transition ${dietFilter===filter ? 'text-white' : 'bg-transparent text-neutral-800 hover:bg-neutral-100'}`}
-                  style={dietFilter===filter ? { background: t.primaryColor } : {}}>
-                  {filter === 'all' ? 'All' : filter === 'veg' ? 'Veg' : 'Non-veg'}
+              {["all", "veg", "nonveg"].map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setDietFilter(filter)}
+                  className={`whitespace-nowrap px-3 py-2 rounded-full text-sm font-medium transition ${dietFilter === filter ? "text-white" : "bg-transparent text-neutral-800 hover:bg-neutral-100"}`}
+                  style={
+                    dietFilter === filter ? { background: t.primaryColor } : {}
+                  }
+                >
+                  {filter === "all"
+                    ? "All"
+                    : filter === "veg"
+                      ? "Veg"
+                      : "Non-veg"}
                 </button>
               ))}
             </div>
             <Link href={`/t/${slug}/cart`}>
               <div className="relative bg-white rounded-full h-10 w-10 flex items-center justify-center shadow-lg">
-                <ShoppingBag className="h-5 w-5" style={{color:t.primaryColor}} />
-                {totalItems>0 && <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full text-xs font-bold text-white flex items-center justify-center" style={{background:t.primaryColor}}>{totalItems}</span>}
+                <ShoppingBag
+                  className="h-5 w-5"
+                  style={{ color: t.primaryColor }}
+                />
+                {totalItems > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full text-xs font-bold text-white flex items-center justify-center"
+                    style={{ background: t.primaryColor }}
+                  >
+                    {totalItems}
+                  </span>
+                )}
               </div>
             </Link>
           </div>
         </div>
-        <div className="absolute bottom-6 left-6 right-6 text-white">
-          <div className="flex items-center gap-3">
-            {t.logo && <img src={t.logo} alt={t.name} className="h-14 w-14 rounded-full border-2 border-white object-cover" />}
-            <div>
-              <h1 className="text-3xl md:text-4xl font-black drop-shadow">{t.name}</h1>
-              <p className="text-sm md:text-base opacity-90">{t.tagline}</p>
-            </div>
-          </div>
+        <div className="absolute bottom-8 left-6 right-6 text-white">
           <div className="mt-3 flex flex-wrap gap-3 text-xs">
-            <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1"><Clock className="h-3 w-3"/> {t.businessHours?.open}-{t.businessHours?.close}</span>
-            {t.address && <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1"><MapPin className="h-3 w-3"/> {t.address}</span>}
-            {t.phone && <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1"><Phone className="h-3 w-3"/> {t.phone}</span>}
+            <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1">
+              <Clock className="h-3 w-3" /> {t.businessHours?.open}-
+              {t.businessHours?.close}
+            </span>
+            {t.address && (
+              <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1">
+                <MapPin className="h-3 w-3" /> {t.address}
+              </span>
+            )}
+            {t.phone && (
+              <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1">
+                <Phone className="h-3 w-3" />
+                <Link href={`+91-${t.phone}`}>+91-{t.phone}</Link>
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -125,18 +227,27 @@ export default function StorefrontPage() {
       <div className="container mx-auto px-4 -mt-6 relative z-10">
         <div className="bg-white rounded-2xl shadow-xl p-3 flex items-center gap-2">
           <Search className="h-5 w-5 text-neutral-400 ml-2" />
-          <Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search products..." className="border-0 focus-visible:ring-0 shadow-none" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search products..."
+            className="border-0 focus-visible:ring-0 shadow-none"
+          />
         </div>
       </div>
 
       <div className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b mt-6">
         <div className="container mx-auto px-4 py-3 flex flex-wrap items-center gap-2">
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
-            {data.categories.map(c => (
-              <button key={c.id} onClick={()=>scrollToCat(c.id)}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition ${activeCat===c.id ? 'text-white shadow' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}
-                style={activeCat===c.id ? { background: t.primaryColor } : {}}>
-                <span className="mr-1">{c.icon}</span>{c.name}
+            {data.categories.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => scrollToCat(c.id)}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition ${activeCat === c.id ? "text-white shadow" : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"}`}
+                style={activeCat === c.id ? { background: t.primaryColor } : {}}
+              >
+                <span className="mr-1">{c.icon}</span>
+                {c.name}
               </button>
             ))}
           </div>
@@ -145,97 +256,154 @@ export default function StorefrontPage() {
 
       <div className="container mx-auto px-4 py-8 space-y-10 pb-32">
         {data.categories.map((c) => {
-          const prods = filtered[c.id] || []
-          if (!prods.length) return null
+          const prods = filtered[c.id] || [];
+          if (!prods.length) return null;
           return (
-            <section key={c.id} ref={el => catRefs.current[c.id] = el}>
-              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><span>{c.icon}</span>{c.name}</h2>
-              <div className="grid gap-6 md:grid-cols-2">
+            <section key={c.id} ref={(el) => (catRefs.current[c.id] = el)}>
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span>{c.icon}</span>
+                {c.name}
+              </h2>
+              <div className="grid gap-2 md:grid-cols-3">
                 <AnimatePresence>
-                {prods.map((p, i) => {
-                  const categoryName = getCategoryName(p, data.categories)
-                  const sizeLabel = getSizeLabel(p)
-                  const discountPercent = getDiscountPercent(p)
-                  const isBestseller = p.badges?.some((b) => /bestseller|popular/i.test(b))
-                  const displayDiet = detectDiet(p)
-                  return (
-                    <motion.div key={p.id} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{delay: 0.03*i}}>
-                      <Card className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-[4px] hover:shadow-xl" style={{ width: '560px' }}>
-                        <div className="grid h-full min-h-[210px] gap-5 p-[20px] md:grid-cols-[160px_minmax(240px,1fr)_150px] items-center">
-                          <Link href={`/t/${slug}/product/${p.id}`} className="group relative block h-[160px] w-[160px] overflow-hidden rounded-xl bg-slate-100 transition duration-300 hover:scale-[1.03]">
-                            {p.images?.[0] ? (
-                              <img loading="lazy" src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400 text-4xl">🍽️</div>
-                            )}
-                            <div className="absolute top-4 left-4">
-                              {isBestseller && <span className="rounded-full bg-amber-500 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">BESTSELLER</span>}
-                            </div>
-                            {p.discountPrice && discountPercent && (
-                              <span className="absolute top-4 right-4 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">{discountPercent}% OFF</span>
-                            )}
-                            <div className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
-                              <span className={`h-2.5 w-2.5 rounded-full ${displayDiet === 'veg' ? 'bg-emerald-500' : displayDiet === 'nonveg' ? 'bg-rose-600' : 'bg-slate-400'}`} />
-                              {displayDiet === 'veg' ? 'Veg' : displayDiet === 'nonveg' ? 'Non-Veg' : 'All'}
-                            </div>
-                          </Link>
-
-                          <div className="flex h-full flex-col justify-center gap-3">
-                            <div className="space-y-3">
-                              <div className="flex items-start justify-between gap-3">
-                                <Link href={`/t/${slug}/product/${p.id}`} className="min-w-0 text-[22px] font-semibold leading-[1.3] text-slate-900 line-clamp-2 hover:underline">
-                                  {p.name}
-                                </Link>
-                                {p.rating && (
-                                  <div className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-sm font-semibold text-amber-700">
-                                    <Star className="h-4 w-4" />{p.rating}
-                                  </div>
-                                )}
-                              </div>
-                              <p className="text-sm leading-6 text-slate-500 line-clamp-2">{p.description}</p>
-                              <div className="space-y-2 text-sm text-slate-500">
-                                {categoryName && <div><span className="font-medium text-slate-700">Category:</span> {categoryName}</div>}
-                                {sizeLabel && <div><span className="font-medium text-slate-700">Weight:</span> {sizeLabel}</div>}
-                                {(p.deliveryTime || data.deliveryTime) && <div><span className="font-medium text-slate-700">Delivery:</span> {p.deliveryTime || data.deliveryTime}</div>}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex h-full min-w-[150px] flex-shrink-0 flex-col justify-between text-right">
-                            <div className="space-y-2 overflow-visible">
-                              <div className="text-[32px] font-bold text-slate-900">{inr(p.discountPrice || p.price)}</div>
-                              {p.discountPrice && (
-                                <div className="space-y-1">
-                                  <div className="text-sm text-slate-500 line-through">{inr(p.price)}</div>
-                                  <div className="text-sm font-semibold text-emerald-600">{discountPercent}% OFF</div>
+                  {prods.map((p, i) => {
+                    const discountPercent = getDiscountPercent(p);
+                    const isBestseller = p.badges?.some((b) =>
+                      /bestseller|popular/i.test(b),
+                    );
+                    const displayDiet = detectDiet(p);
+                    return (
+                      <motion.div
+                        key={p.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.03 * i }}
+                      >
+                        <Card className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-[4px] hover:shadow-xl">
+                          <div className="grid h-full min-h-[210px] gap-3 p-[10px] grid-cols-[160px_minmax(0,1fr)] items-center">
+                            <Link
+                              href={`/t/${slug}/product/${p.id}`}
+                              className="group relative block h-[160px] w-[160px] overflow-hidden rounded-xl bg-slate-100 transition duration-300 hover:scale-[1.03]"
+                            >
+                              {p.images?.[0] ? (
+                                <img
+                                  loading="lazy"
+                                  src={p.images[0]}
+                                  alt={p.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400 text-4xl">
+                                  🍽️
                                 </div>
                               )}
-                            </div>
-                            <div className="flex justify-end">
-                              <Link href={`/t/${slug}/product/${p.id}`}>
-                                <Button className="h-[44px] w-[140px] rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors">
-                                  + Customize →
-                                </Button>
-                              </Link>
+                              <div className="absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
+                                <span
+                                  className={`h-2.5 w-2.5 rounded-full ${displayDiet === "veg" ? "bg-emerald-500" : displayDiet === "nonveg" ? "bg-rose-600" : "bg-slate-400"}`}
+                                />
+                                {displayDiet === "veg"
+                                  ? "Veg"
+                                  : displayDiet === "nonveg"
+                                    ? "Non-Veg"
+                                    : "All"}
+                              </div>
+                              {isBestseller && (
+                                <span className="absolute bottom-4 left-4 rounded-full bg-amber-500 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
+                                  BESTSELLER
+                                </span>
+                              )}
+                            </Link>
+
+                            <div className="flex h-full flex-col justify-center gap-3">
+                              <div className="space-y-3">
+                                <div className="flex items-start justify-between gap-3">
+                                  <Link
+                                    href={`/t/${slug}/product/${p.id}`}
+                                    className="min-w-0 text-[15px] font-semibold leading-[1.3] text-slate-900 line-clamp-2 hover:underline"
+                                  >
+                                    {p.name}
+                                  </Link>
+                                </div>
+                                <p className="text-[15px] leading-6 text-slate-500 line-clamp-2">
+                                  {p.description}
+                                </p>
+                                <div className="flex flex-col justify-between sm:flex-row">
+                                  {/* Price + Discount */}
+                                  <div className="flex flex-row items-center gap-2 sm:flex-col sm:items-start sm:gap-2">
+                                    <div className="text-[15px] font-bold text-slate-900">
+                                      {inr(p.discountPrice || p.price)}
+                                    </div>
+
+                                    {p.discountPrice && discountPercent && (
+                                      <span className="rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
+                                        {discountPercent}% OFF
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Customize Button */}
+                                  <div className="sm:mt-2 flex justify-end">
+                                    {p.variants?.length ||
+                                    p.addons?.length ||
+                                    p.isEggOption ? (
+                                      <Link href={`/t/${slug}/product/${p.id}`}>
+                                        <Button
+                                          size="sm"
+                                          style={{
+                                            background: t.primaryColor,
+                                            color: "white",
+                                          }}
+                                        >
+                                          + Customize →
+                                        </Button>
+                                      </Link>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        disabled={!p.available}
+                                        onClick={() => quickAdd(p)}
+                                        style={{
+                                          background: t.primaryColor,
+                                          color: "white",
+                                        }}
+                                      >
+                                        <Plus className="h-4 w-4 mr-1" />
+                                        Add
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </Card>
-                    </motion.div>
-                  )
-                })}
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
                 </AnimatePresence>
               </div>
             </section>
-          )
+          );
         })}
       </div>
 
-      {totalItems>0 && (
-        <motion.div initial={{y:100}} animate={{y:0}} className="fixed bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-96 z-30">
+      {totalItems > 0 && (
+        <motion.div
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          className="fixed bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-96 z-30"
+        >
           <Link href={`/t/${slug}/cart`}>
-            <div className="rounded-2xl shadow-2xl px-5 py-3 flex items-center justify-between text-white cursor-pointer" style={{ background: t.primaryColor }}>
-              <div className="flex items-center gap-2"><ShoppingBag className="h-5 w-5"/><span className="font-semibold">{totalItems} item{totalItems!==1?'s':''}</span></div>
+            <div
+              className="rounded-2xl shadow-2xl px-5 py-3 flex items-center justify-between text-white cursor-pointer"
+              style={{ background: t.primaryColor }}
+            >
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5" />
+                <span className="font-semibold">
+                  {totalItems} item{totalItems !== 1 ? "s" : ""}
+                </span>
+              </div>
               <div className="font-bold">View cart →</div>
             </div>
           </Link>
@@ -245,30 +413,76 @@ export default function StorefrontPage() {
       <footer className="border-t bg-white/60 py-10">
         <div className="container mx-auto px-4 grid gap-6 md:grid-cols-3 text-sm text-muted-foreground">
           <div>
-            <h3 className="text-base font-semibold text-foreground">{t.name}</h3>
+            <h3 className="text-base font-semibold text-foreground">
+              {t.name}
+            </h3>
             <p className="mt-2 text-sm">{t.tagline}</p>
-            {t.address && <p className="mt-3 flex items-center gap-2"><MapPin className="h-4 w-4" />{t.address}</p>}
+            {t.address && (
+              <p className="mt-3 flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                {t.address}
+              </p>
+            )}
           </div>
           <div>
             <h3 className="text-base font-semibold text-foreground">Contact</h3>
             <div className="mt-3 space-y-2">
-              {t.whatsappNumber && <a href={`https://wa.me/${t.whatsappNumber}`} className="flex items-center gap-2 hover:underline"><Phone className="h-4 w-4" />WhatsApp: {t.whatsappNumber}</a>}
-              {t.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4" />{t.phone}</div>}
-              {t.email && <a href={`mailto:${t.email}`} className="flex items-center gap-2 hover:underline"><span className="h-4 w-4 grid place-items-center">📧</span>{t.email}</a>}
+              {t.whatsappNumber && (
+                <a
+                  href={`https://wa.me/${t.whatsappNumber}`}
+                  className="flex items-center gap-2 hover:underline"
+                >
+                  <Phone className="h-4 w-4" />
+                  WhatsApp: {t.whatsappNumber}
+                </a>
+              )}
+              {t.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  {t.phone}
+                </div>
+              )}
+              {t.email && (
+                <a
+                  href={`mailto:${t.email}`}
+                  className="flex items-center gap-2 hover:underline"
+                >
+                  <span className="h-4 w-4 grid place-items-center">📧</span>
+                  {t.email}
+                </a>
+              )}
             </div>
           </div>
           <div>
             <h3 className="text-base font-semibold text-foreground">Follow</h3>
             <div className="mt-3 space-y-2">
-              {t.socialLinks?.instagram && <a href={t.socialLinks.instagram} className="flex items-center gap-2 hover:underline"><Instagram className="h-4 w-4" />Instagram</a>}
-              {t.socialLinks?.facebook && <a href={t.socialLinks.facebook} className="flex items-center gap-2 hover:underline"><Facebook className="h-4 w-4" />Facebook</a>}
+              {t.socialLinks?.instagram && (
+                <a
+                  href={t.socialLinks.instagram}
+                  className="flex items-center gap-2 hover:underline"
+                >
+                  <Instagram className="h-4 w-4" />
+                  Instagram
+                </a>
+              )}
+              {t.socialLinks?.facebook && (
+                <a
+                  href={t.socialLinks.facebook}
+                  className="flex items-center gap-2 hover:underline"
+                >
+                  <Facebook className="h-4 w-4" />
+                  Facebook
+                </a>
+              )}
             </div>
           </div>
         </div>
-        <div className="mt-8 text-center text-xs text-muted-foreground">Powered by Kirano</div>
+        <div className="mt-8 text-center text-xs text-muted-foreground">
+          Powered by Kirano
+        </div>
       </footer>
 
       <style>{`.no-scrollbar::-webkit-scrollbar{display:none} .no-scrollbar{scrollbar-width:none}`}</style>
     </div>
-  )
+  );
 }
