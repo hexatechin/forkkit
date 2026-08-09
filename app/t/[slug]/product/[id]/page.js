@@ -13,13 +13,20 @@ import { toast } from 'sonner'
 
 const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`
 
+const detectDiet = (product) => {
+  if (product.diet) return product.diet
+  const text = `${product.name || ""} ${product.description || ""}`.toLowerCase()
+  if (/non[- ]?veg|nonveg|non veg|chicken|mutton|fish|prawns|prawn|meat/.test(text)) return 'nonveg'
+  if (/veg|vegetarian|vegan|plant-based/.test(text)) return 'veg'
+  return 'all'
+}
+
 export default function ProductDetail() {
   const { slug, id } = useParams()
   const router = useRouter()
   const [data, setData] = useState(null)
   const [imgIdx, setImgIdx] = useState(0)
   const [variantIdx, setVariantIdx] = useState({})
-  const [eggChoice, setEggChoice] = useState('With egg')
   const [selectedAddons, setSelectedAddons] = useState({})
   const [cakeMsg, setCakeMsg] = useState('')
   const [qty, setQty] = useState(1)
@@ -28,7 +35,12 @@ export default function ProductDetail() {
   useEffect(() => {
     fetch(`/api/tenant/${slug}/product/${id}`).then(r=>r.json()).then(d => {
       setData(d); setTenant(slug)
-      const init = {}; d.product?.variants?.forEach(v => init[v.id] = 0); setVariantIdx(init)
+      const init = {}
+      d.product?.variants?.forEach((v, i) => {
+        const key = v.id || `variant-${i}`
+        init[key] = 0
+      })
+      setVariantIdx(init)
     })
   }, [slug, id])
 
@@ -37,11 +49,15 @@ export default function ProductDetail() {
   const base = p.discountPrice || p.price
   let variantDelta = 0
   const variantLabels = []
-  p.variants?.forEach(v => {
-    const opt = v.options[variantIdx[v.id] || 0]
+  p.variants?.forEach((v, vi) => {
+    const key = v.id || `variant-${vi}`
+    const opt = v.options[variantIdx[key] || 0]
     if (opt) { variantDelta += opt.priceDelta; variantLabels.push(`${v.name}: ${opt.label}`) }
   })
-  const addonsPicked = (p.addons||[]).filter(a => selectedAddons[a.id])
+  const addonsPicked = (p.addons||[]).filter((a, ai) => {
+    const key = a.id || `addon-${ai}`
+    return selectedAddons[key]
+  })
   const addonSum = addonsPicked.reduce((s,a)=>s+a.price,0)
   const unitPrice = base + variantDelta + addonSum
   const total = unitPrice * qty
@@ -49,9 +65,9 @@ export default function ProductDetail() {
   const addToCart = () => {
     addItem({ productId: p.id, name: p.name, image: p.images?.[0], qty, unitPrice,
       variantLabel: variantLabels.join(' | ') || null,
-      eggChoice: p.isEggOption ? eggChoice : null,
       addons: addonsPicked.map(a => ({ name: a.name, price: a.price })),
       cakeMessage: cakeMsg || null,
+      diet: p.diet || 'veg',
     })
     toast.success(`${p.name} added to cart`)
     router.push(`/t/${slug}`)
@@ -83,47 +99,51 @@ export default function ProductDetail() {
             <p className="mt-3 text-muted-foreground">{p.description}</p>
             <div className="mt-4 text-2xl font-bold">{inr(base)}</div>
 
-            {p.variants?.map(v => (
-              <div key={v.id} className="mt-6">
-                <Label className="text-sm font-semibold">{v.name}</Label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {v.options.map((o,i) => (
-                    <button key={i} onClick={()=>setVariantIdx({...variantIdx, [v.id]: i})}
-                      className={`px-4 py-2 rounded-full border-2 text-sm transition ${variantIdx[v.id]===i ? 'text-white' : 'bg-white'}`}
-                      style={variantIdx[v.id]===i ? {background: t.primaryColor, borderColor: t.primaryColor} : {}}>
-                      {o.label}{o.priceDelta ? ` (${o.priceDelta>0?'+':''}${inr(o.priceDelta)})` : ''}
-                    </button>
-                  ))}
+            {p.variants?.map((v, vi) => {
+              const key = v.id || `variant-${vi}`
+              const selectedIndex = variantIdx[key] ?? 0
+              return (
+                <div key={key} className="mt-6">
+                  <Label className="text-sm font-semibold">{v.name}</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {v.options.map((o, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setVariantIdx({ ...variantIdx, [key]: i })}
+                        className={`px-4 py-2 rounded-full border-2 text-sm transition ${selectedIndex === i ? 'text-white' : 'bg-white text-neutral-500'}`}
+                        style={
+                          selectedIndex === i
+                            ? { background: t.primaryColor, borderColor: t.primaryColor }
+                            : { borderColor: '#D1D5DB' }
+                        }
+                      >
+                        {o.label}
+                        {i > 0 && o.priceDelta ? ` (+${inr(o.priceDelta)})` : ''}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
 
-            {p.isEggOption && (
-              <div className="mt-6">
-                <Label className="text-sm font-semibold">Preference</Label>
-                <div className="mt-2 flex gap-2">
-                  {['With egg','Eggless'].map(e => (
-                    <button key={e} onClick={()=>setEggChoice(e)}
-                      className={`px-4 py-2 rounded-full border-2 text-sm ${eggChoice===e?'text-white':'bg-white'}`}
-                      style={eggChoice===e ? {background: t.primaryColor, borderColor: t.primaryColor} : {}}>{e}</button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {p.addons?.length>0 && (
               <div className="mt-6">
                 <Label className="text-sm font-semibold">Add-ons</Label>
                 <div className="mt-2 space-y-2">
-                  {p.addons.map(a => (
-                    <label key={a.id} className="flex items-center justify-between bg-white rounded-lg border p-3 cursor-pointer hover:border-neutral-400">
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" checked={!!selectedAddons[a.id]} onChange={e=>setSelectedAddons({...selectedAddons,[a.id]:e.target.checked})} />
-                        <span>{a.name}</span>
-                      </div>
-                      <span className="text-sm font-medium">+{inr(a.price)}</span>
-                    </label>
-                  ))}
+                  {p.addons.map((a, ai) => {
+                    const key = a.id || `addon-${ai}`
+                    return (
+                      <label key={key} className="flex items-center justify-between bg-white rounded-lg border p-3 cursor-pointer hover:border-neutral-400">
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" checked={!!selectedAddons[key]} onChange={e=>setSelectedAddons({...selectedAddons,[key]:e.target.checked})} />
+                          <span>{a.name}</span>
+                        </div>
+                        <span className="text-sm font-medium">+{inr(a.price)}</span>
+                      </label>
+                    )
+                  })}
                 </div>
               </div>
             )}

@@ -45,7 +45,7 @@ export default function CartPage() {
           customer: { name: form.name, phone: form.phone, address: form.address },
           mode, scheduledAt: form.scheduledAt, occasion: form.occasion, notes: form.notes,
           cakeMessage: items.find(i=>i.cakeMessage)?.cakeMessage || null,
-          items: items.map(i => ({ productId:i.productId, name:i.name, qty:i.qty, unitPrice:i.unitPrice, variantLabel:i.variantLabel, eggChoice:i.eggChoice, addons:i.addons }))
+          items: items.map(i => ({ productId:i.productId, name:i.name, qty:i.qty, unitPrice:i.unitPrice, variantLabel:i.variantLabel, addons:i.addons }))
         })
       })
       const data = await res.json()
@@ -77,7 +77,7 @@ export default function CartPage() {
                     {i.image && <img src={i.image} className="h-20 w-20 rounded-lg object-cover"/>}
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold">{i.name}</div>
-                      {(i.variantLabel || i.eggChoice) && <div className="text-xs text-muted-foreground">{[i.variantLabel, i.eggChoice].filter(Boolean).join(' • ')}</div>}
+                      {i.variantLabel && <div className="text-xs text-muted-foreground">{i.variantLabel}</div>}
                       {i.addons?.length>0 && <div className="text-xs text-muted-foreground">+ {i.addons.map(a=>a.name).join(', ')}</div>}
                       {i.cakeMessage && <div className="text-xs text-muted-foreground italic">“{i.cakeMessage}”</div>}
                       <div className="mt-2 flex items-center justify-between">

@@ -21,8 +21,9 @@ const BLANK = {
   name: '', description: '', categoryId: '',
   price: '', discountPrice: '',
   images: '', available: true, badges: '',
+  diet: 'veg',
   variants: [], addons: [],
-  isEggOption: false, allowCakeMessage: false,
+  allowCakeMessage: false,
 }
 
 // Given a category, decide which optional editors to show.
@@ -31,7 +32,6 @@ function schemaFor(cat) {
   return {
     showVariants: Array.isArray(cat?.customVariants) && cat.customVariants.length > 0,
     showAddons: Array.isArray(cat?.customAddons) && cat.customAddons.length > 0,
-    showEggOption: !!cat?.customFlags?.isEggOption,
     showCakeMessage: !!cat?.customFlags?.allowCakeMessage,
   }
 }
@@ -74,11 +74,10 @@ function ProductsInner() {
   // Prefill from category template (deep clones so edits don't mutate the source)
   const applyCategoryTemplate = (categoryId, allCats) => {
     const cat = (allCats || cats).find(c => c.id === categoryId)
-    if (!cat) return { variants: [], addons: [], isEggOption: false, allowCakeMessage: false }
+    if (!cat) return { variants: [], addons: [], allowCakeMessage: false }
     return {
-      variants: JSON.parse(JSON.stringify(cat.customVariants || [])),
-      addons: JSON.parse(JSON.stringify(cat.customAddons || [])),
-      isEggOption: !!cat.customFlags?.isEggOption,
+      variants: (cat.customVariants || []).map((v) => ({ id: v.id || crypto.randomUUID(), name: v.name, options: JSON.parse(JSON.stringify(v.options || [])) })),
+      addons: (cat.customAddons || []).map((a) => ({ id: a.id || crypto.randomUUID(), name: a.name, price: a.price || 0 })),
       allowCakeMessage: !!cat.customFlags?.allowCakeMessage,
     }
   }
@@ -99,9 +98,9 @@ function ProductsInner() {
       images: (p.images || []).join(','),
       available: p.available !== false,
       badges: (p.badges || []).join(','),
-      variants: p.variants || [],
-      addons: p.addons || [],
-      isEggOption: !!p.isEggOption,
+      diet: p.diet || 'veg',
+      variants: (p.variants || []).map(v => ({ id: v.id || crypto.randomUUID(), name: v.name, options: v.options || [] })),
+      addons: (p.addons || []).map(a => ({ id: a.id || crypto.randomUUID(), name: a.name, price: a.price })),
       allowCakeMessage: !!p.allowCakeMessage,
     })
     setOpen(true)
@@ -123,12 +122,17 @@ function ProductsInner() {
     const cat = cats.find(c => c.id === f.categoryId)
     const s = schemaFor(cat)
 
-    // Only persist optional fields the category has configured (so removing a category's
-    // eggless toggle later cleanly hides it on products too).
+    // Only persist optional fields the category has configured, so category-driven product behavior stays consistent.
     const t = localStorage.getItem('kirano-token')
     const variants = s.showVariants
       ? (f.variants || [])
-          .map(v => ({ name: v.name?.trim(), options: (v.options || []).map(o => ({ label: o.label?.trim(), priceDelta: Number(o.priceDelta) || 0 })).filter(o => o.label) }))
+          .map(v => ({
+            name: v.name?.trim(),
+            options: (v.options || []).map((o, oi) => ({
+              label: o.label?.trim(),
+              priceDelta: oi === 0 ? 0 : Number(o.priceDelta) || 0,
+            })).filter(o => o.label),
+          }))
           .filter(v => v.name && v.options.length)
       : []
     const addons = s.showAddons
@@ -145,8 +149,8 @@ function ProductsInner() {
       images: f.images.split(',').map(x => x.trim()).filter(Boolean),
       badges: f.badges.split(',').map(x => x.trim()).filter(Boolean),
       available: !!f.available,
+      diet: f.diet || 'veg',
       variants, addons,
-      isEggOption: s.showEggOption ? !!f.isEggOption : false,
       allowCakeMessage: s.showCakeMessage ? !!f.allowCakeMessage : false,
     }
     const url = editing ? `/api/admin/products/${editing.id}` : '/api/admin/products'
@@ -182,7 +186,7 @@ function ProductsInner() {
 
   const currentCat = cats.find(c => c.id === f.categoryId)
   const schema = schemaFor(currentCat)
-  const anyExtra = schema.showVariants || schema.showAddons || schema.showEggOption || schema.showCakeMessage
+  const anyExtra = schema.showVariants || schema.showAddons || schema.showCakeMessage
 
   return (
     <div className="max-w-6xl">
@@ -296,23 +300,26 @@ function ProductsInner() {
             </div>
             <div><Label>Image URLs (comma-separated)</Label><Textarea placeholder="https://... , https://..." value={f.images} onChange={e => setF({ ...f, images: e.target.value })} rows={2} /></div>
             <div><Label>Badges</Label><Input placeholder="Bestseller, New (comma-separated)" value={f.badges} onChange={e => setF({ ...f, badges: e.target.value })} /></div>
+            <div>
+              <Label>Diet</Label>
+              <div className="mt-2 flex gap-2">
+                {['veg','nonveg'].map((option) => (
+                  <button key={option} type="button" onClick={() => setF({ ...f, diet: option })}
+                    className={`rounded-full px-3 py-2 text-sm font-medium transition ${f.diet === option ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}>
+                    {option === 'veg' ? 'Veg' : 'Non-veg'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="flex items-center gap-3"><Switch checked={f.available} onCheckedChange={v => setF({ ...f, available: v })} /> <Label>Available for order</Label></div>
 
             {/* Optional fields (only if configured in category) */}
-            {(schema.showEggOption || schema.showCakeMessage) && (
-              <div className={`grid grid-cols-1 ${schema.showEggOption && schema.showCakeMessage ? 'sm:grid-cols-2' : ''} gap-2`}>
-                {schema.showEggOption && (
-                  <label className="flex items-center gap-3 border rounded-lg p-3 cursor-pointer hover:bg-neutral-50">
-                    <Switch checked={f.isEggOption} onCheckedChange={v => setF({ ...f, isEggOption: v })} />
-                    <div><div className="text-sm font-medium">Eggless option</div><div className="text-xs text-muted-foreground">With egg / Eggless choice</div></div>
-                  </label>
-                )}
-                {schema.showCakeMessage && (
-                  <label className="flex items-center gap-3 border rounded-lg p-3 cursor-pointer hover:bg-neutral-50">
-                    <Switch checked={f.allowCakeMessage} onCheckedChange={v => setF({ ...f, allowCakeMessage: v })} />
-                    <div><div className="text-sm font-medium">Custom message</div><div className="text-xs text-muted-foreground">Cake / card message field</div></div>
-                  </label>
-                )}
+            {schema.showCakeMessage && (
+              <div className="grid grid-cols-1 gap-2">
+                <label className="flex items-center gap-3 border rounded-lg p-3 cursor-pointer hover:bg-neutral-50">
+                  <Switch checked={f.allowCakeMessage} onCheckedChange={v => setF({ ...f, allowCakeMessage: v })} />
+                  <div><div className="text-sm font-medium">Custom message</div><div className="text-xs text-muted-foreground">Cake / card message field</div></div>
+                </label>
               </div>
             )}
 
@@ -328,10 +335,17 @@ function ProductsInner() {
                           <div key={oi} className="flex gap-2 items-center">
                             <div className="flex-1 text-sm">{o.label}</div>
                             <span className="text-xs text-muted-foreground">+₹</span>
-                            <Input type="number" value={o.priceDelta} onChange={e => updateVariantOption(vi, oi, { priceDelta: e.target.value })} className="w-24 h-8 text-sm" />
+                            <Input
+                              type="number"
+                              value={o.priceDelta}
+                              onChange={e => updateVariantOption(vi, oi, { priceDelta: e.target.value })}
+                              className="w-24 h-8 text-sm"
+                              disabled={oi === 0}
+                            />
                           </div>
                         ))}
                       </div>
+                      <div className="text-xs text-muted-foreground mt-1">First option uses the base product price and cannot be adjusted.</div>
                     </Card>
                   ))}
                 </div>

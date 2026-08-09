@@ -22,6 +22,7 @@ export default function AdminSettings() {
     else toast.error('Save failed')
   }
   const set = (k,v) => setT({...t,[k]:v})
+  const setSocial = (k,v) => setT({ ...t, socialLinks: { ...(t.socialLinks || {}), [k]: v } })
 
   return (
     <div className="max-w-3xl">
@@ -32,6 +33,8 @@ export default function AdminSettings() {
           <div><Label>Tagline</Label><Input value={t.tagline||''} onChange={e=>set('tagline',e.target.value)}/></div>
           <div><Label>WhatsApp number (with country code, digits only)</Label><Input value={t.whatsappNumber||''} onChange={e=>set('whatsappNumber',e.target.value)} placeholder="919812345678"/></div>
           <div><Label>Phone</Label><Input value={t.phone||''} onChange={e=>set('phone',e.target.value)}/></div>
+          <div><Label>Instagram URL</Label><Input value={t.socialLinks?.instagram||''} onChange={e=>setSocial('instagram',e.target.value)} placeholder="https://instagram.com/yourshop"/></div>
+          <div><Label>Facebook URL</Label><Input value={t.socialLinks?.facebook||''} onChange={e=>setSocial('facebook',e.target.value)} placeholder="https://facebook.com/yourshop"/></div>
           <div className="col-span-2"><Label>Address</Label><Input value={t.address||''} onChange={e=>set('address',e.target.value)}/></div>
           <div><Label>Logo URL</Label><Input value={t.logo||''} onChange={e=>set('logo',e.target.value)}/></div>
           <div><Label>Banner URL</Label><Input value={t.banner||''} onChange={e=>set('banner',e.target.value)}/></div>

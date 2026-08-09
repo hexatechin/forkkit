@@ -14,7 +14,6 @@ import { toast } from 'sonner'
 const COMMON_ICONS = ['🎂','🥐','🍞','🍪','☕','🍳','🥪','🧋','💐','🌷','🌹','🪴','🎁','🎓','✨','🍛','🍝','🍽️','🍕','🍢','🍰','💻','🪑','🏢','🎫','🥤','🌯','🥗','🍔','🌮']
 
 const FLAG_DEFS = [
-  { key: 'isEggOption', label: 'Eggless option', hint: 'Show a "With egg / Eggless" toggle' },
   { key: 'allowCakeMessage', label: 'Custom message', hint: 'Let customers add a personal message (e.g. on a cake or card)' },
 ]
 
@@ -47,8 +46,11 @@ export default function AdminCategories() {
     setF({
       name: c.name,
       icon: c.icon || '🍽️',
-      customVariants: c.customVariants || [],
-      customAddons: c.customAddons || [],
+      customVariants: (c.customVariants || []).map(v => ({
+        name: v.name,
+        options: (v.options || []).map(o => ({ label: o.label }))
+      })),
+      customAddons: (c.customAddons || []).map(a => ({ name: a.name })),
       customFlags: c.customFlags || {},
     })
     setOpen(true)
@@ -58,15 +60,17 @@ export default function AdminCategories() {
     if (!f.name.trim()) return toast.error('Category name is required')
     // Clean out empty rows
     const customVariants = (f.customVariants||[])
-      .map(v => ({ name: v.name?.trim(), options: (v.options||[]).map(o => ({ label: o.label?.trim(), priceDelta: Number(o.priceDelta)||0 })).filter(o => o.label) }))
+      .map(v => ({ name: v.name?.trim(), options: (v.options||[]).map(o => ({ label: o.label?.trim() })).filter(o => o.label) }))
       .filter(v => v.name && v.options.length)
     const customAddons = (f.customAddons||[])
-      .map(a => ({ name: a.name?.trim(), price: Number(a.price)||0 }))
+      .map(a => ({ name: a.name?.trim() }))
       .filter(a => a.name)
+    const cleanFlags = { ...(f.customFlags || {}) }
+    delete cleanFlags.diet
     const t = localStorage.getItem('kirano-token')
     const url = editing ? `/api/admin/categories/${editing.id}` : '/api/admin/categories'
     const method = editing ? 'PUT' : 'POST'
-    const res = await fetch(url, { method, headers:{'Content-Type':'application/json', Authorization: `Bearer ${t}`}, body: JSON.stringify({ name: f.name.trim(), icon: f.icon, customVariants, customAddons, customFlags: f.customFlags||{} }) })
+    const res = await fetch(url, { method, headers:{'Content-Type':'application/json', Authorization: `Bearer ${t}`}, body: JSON.stringify({ name: f.name.trim(), icon: f.icon, customVariants, customAddons, customFlags: cleanFlags }) })
     if (!res.ok) { const d = await res.json(); return toast.error(d.error || 'Failed') }
     toast.success(editing ? 'Category updated' : 'Category added')
     setOpen(false); load()
@@ -85,13 +89,16 @@ export default function AdminCategories() {
   const countFor = (cid) => products.filter(p => p.categoryId === cid).length
 
   // --- Custom template editor helpers ---
-  const addVariant = () => setF({...f, customVariants:[...(f.customVariants||[]), { name:'', options:[{label:'', priceDelta:0}] }]})
+  const addVariant = () => {
+    if ((f.customVariants || []).length > 0) return
+    setF({...f, customVariants:[...(f.customVariants||[]), { name:'', options:[{label:''}] }]})
+  }
   const removeVariant = (i) => setF({...f, customVariants: f.customVariants.filter((_,idx)=>idx!==i)})
   const updateVariant = (i, patch) => setF({...f, customVariants: f.customVariants.map((v,idx)=> idx===i ? {...v, ...patch} : v)})
-  const addOption = (vi) => updateVariant(vi, { options: [...f.customVariants[vi].options, {label:'', priceDelta:0}] })
+  const addOption = (vi) => updateVariant(vi, { options: [...f.customVariants[vi].options, {label:''}] })
   const removeOption = (vi, oi) => updateVariant(vi, { options: f.customVariants[vi].options.filter((_,idx)=>idx!==oi) })
   const updateOption = (vi, oi, patch) => updateVariant(vi, { options: f.customVariants[vi].options.map((o,idx)=> idx===oi ? {...o, ...patch} : o) })
-  const addAddon = () => setF({...f, customAddons:[...(f.customAddons||[]), {name:'', price:0}]})
+  const addAddon = () => setF({...f, customAddons:[...(f.customAddons||[]), {name:''}]})
   const removeAddon = (i) => setF({...f, customAddons: f.customAddons.filter((_,idx)=>idx!==i)})
   const updateAddon = (i, patch) => setF({...f, customAddons: f.customAddons.map((a,idx)=> idx===i ? {...a, ...patch} : a)})
 
@@ -143,7 +150,6 @@ export default function AdminCategories() {
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {c.customVariants?.map((v,i) => <span key={'v'+i} className="text-[10px] bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">{v.name}: {v.options?.length||0} opts</span>)}
                       {c.customAddons?.length > 0 && <span className="text-[10px] bg-purple-50 text-purple-700 rounded-full px-2 py-0.5">{c.customAddons.length} add-on{c.customAddons.length!==1?'s':''}</span>}
-                      {c.customFlags?.isEggOption && <span className="text-[10px] bg-amber-50 text-amber-700 rounded-full px-2 py-0.5">Eggless option</span>}
                       {c.customFlags?.allowCakeMessage && <span className="text-[10px] bg-pink-50 text-pink-700 rounded-full px-2 py-0.5">Custom message</span>}
                     </div>
                   )}
@@ -184,7 +190,6 @@ export default function AdminCategories() {
                 <button key={i} type="button" onClick={()=>setF({...f,icon:i})} className={`h-8 w-8 rounded-lg text-lg hover:bg-neutral-100 ${f.icon===i ? 'bg-neutral-900 text-white hover:bg-neutral-800' : ''}`}>{i}</button>
               ))}
             </div>
-
             {/* Customization template */}
             <div className="border rounded-xl p-4 bg-gradient-to-br from-amber-50/50 to-rose-50/30">
               <div className="flex items-center gap-2 mb-1">
@@ -210,7 +215,9 @@ export default function AdminCategories() {
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-sm">Variants (size, style, etc.)</Label>
-                  <Button size="sm" variant="outline" onClick={addVariant} className="h-7"><Plus className="h-3 w-3 mr-1"/>Add variant</Button>
+                  {(f.customVariants || []).length === 0 && (
+                    <Button size="sm" variant="outline" onClick={addVariant} className="h-7"><Plus className="h-3 w-3 mr-1"/>Add variant</Button>
+                  )}
                 </div>
                 <div className="space-y-3">
                   {(f.customVariants||[]).map((v, vi) => (
@@ -223,8 +230,6 @@ export default function AdminCategories() {
                         {v.options.map((o, oi) => (
                           <div key={oi} className="flex gap-2 items-center">
                             <Input placeholder="Option label (e.g. 1 kg)" value={o.label} onChange={e=>updateOption(vi, oi, {label:e.target.value})} className="flex-1 h-8 text-sm"/>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">+₹</div>
-                            <Input type="number" placeholder="0" value={o.priceDelta} onChange={e=>updateOption(vi, oi, {priceDelta:e.target.value})} className="w-20 h-8 text-sm"/>
                             <Button size="icon" variant="ghost" onClick={()=>removeOption(vi, oi)} className="h-7 w-7"><X className="h-3 w-3"/></Button>
                           </div>
                         ))}
@@ -246,8 +251,6 @@ export default function AdminCategories() {
                   {(f.customAddons||[]).map((a, i) => (
                     <div key={i} className="flex gap-2 items-center">
                       <Input placeholder="Add-on name (e.g. Candles, Extra shot)" value={a.name} onChange={e=>updateAddon(i, {name:e.target.value})} className="flex-1 h-8 text-sm"/>
-                      <div className="text-xs text-muted-foreground">₹</div>
-                      <Input type="number" placeholder="0" value={a.price} onChange={e=>updateAddon(i, {price:e.target.value})} className="w-20 h-8 text-sm"/>
                       <Button size="icon" variant="ghost" onClick={()=>removeAddon(i)} className="h-7 w-7"><X className="h-3 w-3"/></Button>
                     </div>
                   ))}

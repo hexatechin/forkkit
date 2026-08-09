@@ -217,7 +217,7 @@ export default function Landing() {
         <div className="grid md:grid-cols-2 gap-16 items-center">
           <div>
             <h2 className="text-4xl md:text-5xl font-black leading-tight">Every order arrives<br/>ready to confirm.</h2>
-            <p className="mt-4 text-white/70 text-lg">No more asking "what size?", "eggless?", "delivery time?". Every WhatsApp message includes it all. Just reply — "Confirmed. Delivering by 6 PM 🚀".</p>
+            <p className="mt-4 text-white/70 text-lg">No more asking "what size?", "delivery time?". Every WhatsApp message includes it all. Just reply — "Confirmed. Delivering by 6 PM 🚀".</p>
             <ul className="mt-6 space-y-3 text-white/80">
               <li className="flex gap-2"><Shield className="h-5 w-5 text-emerald-400 mt-0.5 shrink-0"/>Keep using WhatsApp — no new app to learn</li>
               <li className="flex gap-2"><Shield className="h-5 w-5 text-emerald-400 mt-0.5 shrink-0"/>Customers see prices, discounts and availability upfront</li>
@@ -245,7 +245,7 @@ Order ID: 8A2F91
 
 *Items:*
   • 1 × Chocolate Truffle Cake
-    (Size: 1 kg | Eggless | Candles)
+    (Size: 1 kg | Candles)
     — ₹1,199
 
 *Total:* ₹1,199`}

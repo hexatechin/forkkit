@@ -42,6 +42,22 @@ function buildUpdate(body, allowedFields) {
   return { set, values };
 }
 
+function normalizeCategoryTemplate(body) {
+  const customVariants = (body.customVariants || [])
+    .map((v) => ({
+      name: v.name?.trim(),
+      options: (v.options || [])
+        .map((o) => ({ label: o.label?.trim() }))
+        .filter((o) => o.label),
+    }))
+    .filter((v) => v.name && v.options.length);
+  const customAddons = (body.customAddons || [])
+    .map((a) => ({ name: a.name?.trim() }))
+    .filter((a) => a.name);
+  const customFlags = body.customFlags || {};
+  return { customVariants, customAddons, customFlags };
+}
+
 async function route(request, method, segments) {
   const db = getDb();
   await ensureSchema();
@@ -163,7 +179,7 @@ async function route(request, method, segments) {
         rating: p.rating || null,
         badges: p.badges || [],
         available: true,
-        isEggOption: !!p.isEggOption,
+        diet: p.diet || 'veg',
         allowCakeMessage: !!p.allowCakeMessage,
         variants: (p.variants || []).map((v) => ({
           id: uuid(),
@@ -179,7 +195,7 @@ async function route(request, method, segments) {
       .filter((p) => p.categoryId);
     for (const product of prodDocs) {
       await db.query(
-        `INSERT INTO products (id, tenantId, categoryId, name, description, images, price, discountPrice, rating, badges, available, isEggOption, allowCakeMessage, variants, addons)
+        `INSERT INTO products (id, tenantId, categoryId, name, description, images, price, discountPrice, rating, badges, available, diet, allowCakeMessage, variants, addons)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
         [
           product.id,
@@ -193,7 +209,7 @@ async function route(request, method, segments) {
           product.rating,
           jsonValue(product.badges),
           product.available,
-          product.isEggOption,
+          product.diet,
           product.allowCakeMessage,
           jsonValue(product.variants),
           jsonValue(product.addons),
@@ -333,7 +349,8 @@ async function route(request, method, segments) {
               tenantId AS "tenantId",
               name,
               order_index AS "order",
-              icon
+              icon,
+              customFlags AS "customFlags"
        FROM categories WHERE tenantId=$1 ORDER BY order_index`,
       [tenant.id],
     );
@@ -349,7 +366,7 @@ async function route(request, method, segments) {
               rating,
               badges,
               available,
-              isEggOption AS "isEggOption",
+              diet,
               allowCakeMessage AS "allowCakeMessage",
               variants,
               addons
@@ -392,7 +409,7 @@ async function route(request, method, segments) {
               rating,
               badges,
               available,
-              isEggOption AS "isEggOption",
+              diet,
               allowCakeMessage AS "allowCakeMessage",
               variants,
               addons
@@ -487,7 +504,6 @@ async function route(request, method, segments) {
     items.forEach((i) => {
       const opts = [];
       if (i.variantLabel) opts.push(i.variantLabel);
-      if (i.eggChoice) opts.push(i.eggChoice);
       if (i.addons?.length) opts.push(i.addons.map((a) => a.name).join(", "));
       const line = `  • ${i.qty} × ${i.name}${opts.length ? " (" + opts.join(" | ") + ")" : ""} — ₹${(i.unitPrice * i.qty).toLocaleString("en-IN")}`;
       lines.push(line);
@@ -599,7 +615,7 @@ async function route(request, method, segments) {
               rating,
               badges,
               available,
-              isEggOption AS "isEggOption",
+              diet,
               allowCakeMessage AS "allowCakeMessage",
               variants,
               addons
@@ -636,7 +652,7 @@ async function route(request, method, segments) {
       ...body,
     };
     await db.query(
-      `INSERT INTO products (id, tenantId, categoryId, name, description, images, price, discountPrice, rating, badges, available, isEggOption, allowCakeMessage, variants, addons)
+      `INSERT INTO products (id, tenantId, categoryId, name, description, images, price, discountPrice, rating, badges, available, diet, allowCakeMessage, variants, addons)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
         product.id,
@@ -650,7 +666,7 @@ async function route(request, method, segments) {
         product.rating || null,
         jsonValue(product.badges),
         product.available,
-        product.isEggOption || false,
+        product.diet || 'veg',
         product.allowCakeMessage || false,
         jsonValue(product.variants),
         jsonValue(product.addons),
@@ -682,8 +698,9 @@ async function route(request, method, segments) {
     ]);
     if (error) return error;
     const body = await request.json();
-    const { name, icon, customVariants, customAddons, customFlags } = body;
+    const { name, icon } = body;
     if (!name) return err("Missing category name");
+    const { customVariants, customAddons, customFlags } = normalizeCategoryTemplate(body);
     const { rows } = await db.query(
       `SELECT COALESCE(MAX(order_index),0)+1 AS next_order FROM categories WHERE tenantId=$1`,
       [user.tenantId],
@@ -733,8 +750,16 @@ async function route(request, method, segments) {
       if (body.name !== undefined) { setParts.push(`name=$${idx++}`); values.push(body.name); }
       if (body.icon !== undefined) { setParts.push(`icon=$${idx++}`); values.push(body.icon); }
       if (body.order_index !== undefined) { setParts.push(`order_index=$${idx++}`); values.push(body.order_index); }
-      if (body.customVariants !== undefined) { setParts.push(`customVariants=$${idx++}::jsonb`); values.push(JSON.stringify(body.customVariants)); }
-      if (body.customAddons !== undefined) { setParts.push(`customAddons=$${idx++}::jsonb`); values.push(JSON.stringify(body.customAddons)); }
+      if (body.customVariants !== undefined) {
+        const { customVariants } = normalizeCategoryTemplate(body);
+        setParts.push(`customVariants=$${idx++}::jsonb`);
+        values.push(JSON.stringify(customVariants));
+      }
+      if (body.customAddons !== undefined) {
+        const { customAddons } = normalizeCategoryTemplate(body);
+        setParts.push(`customAddons=$${idx++}::jsonb`);
+        values.push(JSON.stringify(customAddons));
+      }
       if (body.customFlags !== undefined) { setParts.push(`customFlags=$${idx++}::jsonb`); values.push(JSON.stringify(body.customFlags)); }
       if (setParts.length) {
         await db.query(
@@ -798,7 +823,7 @@ async function route(request, method, segments) {
         "rating",
         "badges",
         "available",
-        "isEggOption",
+        "diet",
         "allowCakeMessage",
         "variants",
         "addons",

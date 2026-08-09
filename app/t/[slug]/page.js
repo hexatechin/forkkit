@@ -8,16 +8,35 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Search, ShoppingBag, Star, Clock, MapPin, Phone, Instagram, Plus } from 'lucide-react'
+import { Search, ShoppingBag, Star, Clock, MapPin, Phone, Instagram, Plus, Facebook } from 'lucide-react'
 import { useCart } from '@/lib/cart-store'
 
 const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`
+
+const detectDiet = (product) => {
+  if (product.diet) return product.diet
+  const text = `${product.name || ""} ${product.description || ""}`.toLowerCase()
+  if (/non[- ]?veg|nonveg|non veg|chicken|mutton|fish|prawns|prawn|meat/.test(text)) return 'nonveg'
+  if (/veg|vegetarian|vegan|plant-based/.test(text)) return 'veg'
+  return 'all'
+}
+
+const getCategoryName = (product, categories) => categories?.find((c) => c.id === product.categoryId)?.name || ''
+const getSizeLabel = (product) => {
+  const sizeVariant = (product.variants || []).find((v) => /size|weight/i.test(v.name)) || product.variants?.[0]
+  return sizeVariant?.options?.[0]?.label || null
+}
+const getDiscountPercent = (product) => {
+  if (!product.discountPrice || !product.price) return null
+  return Math.round(100 - (product.discountPrice / product.price) * 100)
+}
 
 export default function StorefrontPage() {
   const { slug } = useParams()
   const [data, setData] = useState(null)
   const [q, setQ] = useState('')
   const [activeCat, setActiveCat] = useState(null)
+  const [dietFilter, setDietFilter] = useState('all')
   const catRefs = useRef({})
   const { items, setTenant, addItem } = useCart()
 
@@ -33,10 +52,20 @@ export default function StorefrontPage() {
     data.categories.forEach(c => byCat[c.id] = [])
     data.products.forEach(p => {
       if (q && !p.name.toLowerCase().includes(q.toLowerCase()) && !p.description?.toLowerCase().includes(q.toLowerCase())) return
+      const diet = detectDiet(p)
+      if (dietFilter === 'veg' && diet !== 'veg') return
+      if (dietFilter === 'nonveg' && diet !== 'nonveg') return
       if (byCat[p.categoryId]) byCat[p.categoryId].push(p)
     })
     return byCat
-  }, [data, q])
+  }, [data, q, dietFilter])
+
+  const cartCounts = useMemo(() => {
+    return items.reduce((acc, item) => {
+      acc[item.productId] = (acc[item.productId] || 0) + item.qty
+      return acc
+    }, {})
+  }, [items])
 
   if (!data) return (
     <div className="min-h-screen bg-neutral-50">
@@ -50,21 +79,32 @@ export default function StorefrontPage() {
   const scrollToCat = (cid) => { setActiveCat(cid); catRefs.current[cid]?.scrollIntoView({ behavior:'smooth', block:'start' }) }
   const quickAdd = (p) => {
     const unitPrice = p.discountPrice || p.price
-    addItem({ productId: p.id, name: p.name, image: p.images?.[0], qty: 1, unitPrice, variantLabel: null, eggChoice: null, addons: [] })
+    addItem({ productId: p.id, name: p.name, image: p.images?.[0], qty: 1, unitPrice, variantLabel: null, addons: [] })
   }
 
   return (
     <div className="min-h-screen" style={{ background: t.bgTint || '#fafafa' }}>
       <div className="relative h-64 md:h-80 w-full" style={{ backgroundImage: `url(${t.banner})`, backgroundSize:'cover', backgroundPosition:'center'}}>
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-        <div className="absolute top-4 left-4 right-4 flex justify-between">
+        <div className="absolute top-4 left-4 right-4 flex justify-between items-center gap-3">
           <Link href="/" className="text-white/90 text-sm bg-black/30 backdrop-blur rounded-full px-3 py-1 hover:bg-black/50">← All storefronts</Link>
-          <Link href={`/t/${slug}/cart`}>
-            <div className="relative bg-white rounded-full h-10 w-10 flex items-center justify-center shadow-lg">
-              <ShoppingBag className="h-5 w-5" style={{color:t.primaryColor}} />
-              {totalItems>0 && <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full text-xs font-bold text-white flex items-center justify-center" style={{background:t.primaryColor}}>{totalItems}</span>}
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 bg-white/90 rounded-full p-1 shadow-sm">
+              {['all','veg','nonveg'].map(filter => (
+                <button key={filter} onClick={() => setDietFilter(filter)}
+                  className={`whitespace-nowrap px-3 py-2 rounded-full text-sm font-medium transition ${dietFilter===filter ? 'text-white' : 'bg-transparent text-neutral-800 hover:bg-neutral-100'}`}
+                  style={dietFilter===filter ? { background: t.primaryColor } : {}}>
+                  {filter === 'all' ? 'All' : filter === 'veg' ? 'Veg' : 'Non-veg'}
+                </button>
+              ))}
             </div>
-          </Link>
+            <Link href={`/t/${slug}/cart`}>
+              <div className="relative bg-white rounded-full h-10 w-10 flex items-center justify-center shadow-lg">
+                <ShoppingBag className="h-5 w-5" style={{color:t.primaryColor}} />
+                {totalItems>0 && <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full text-xs font-bold text-white flex items-center justify-center" style={{background:t.primaryColor}}>{totalItems}</span>}
+              </div>
+            </Link>
+          </div>
         </div>
         <div className="absolute bottom-6 left-6 right-6 text-white">
           <div className="flex items-center gap-3">
@@ -90,14 +130,16 @@ export default function StorefrontPage() {
       </div>
 
       <div className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b mt-6">
-        <div className="container mx-auto px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar">
-          {data.categories.map(c => (
-            <button key={c.id} onClick={()=>scrollToCat(c.id)}
-              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition ${activeCat===c.id ? 'text-white shadow' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}
-              style={activeCat===c.id ? { background: t.primaryColor } : {}}>
-              <span className="mr-1">{c.icon}</span>{c.name}
-            </button>
-          ))}
+        <div className="container mx-auto px-4 py-3 flex flex-wrap items-center gap-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {data.categories.map(c => (
+              <button key={c.id} onClick={()=>scrollToCat(c.id)}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition ${activeCat===c.id ? 'text-white shadow' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}
+                style={activeCat===c.id ? { background: t.primaryColor } : {}}>
+                <span className="mr-1">{c.icon}</span>{c.name}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -108,50 +150,80 @@ export default function StorefrontPage() {
           return (
             <section key={c.id} ref={el => catRefs.current[c.id] = el}>
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><span>{c.icon}</span>{c.name}</h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-6 md:grid-cols-2">
                 <AnimatePresence>
-                {prods.map((p, i) => (
-                  <motion.div key={p.id} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{delay: 0.03*i}}>
-                    <Card className="overflow-hidden hover:shadow-lg transition group border-neutral-200/60">
-                      <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
-                        <Link href={`/t/${slug}/product/${p.id}`}>
-                          <img loading="lazy" src={p.images?.[0]} alt={p.name} className="h-full w-full object-cover group-hover:scale-105 transition" />
-                        </Link>
-                        <div className="absolute top-2 left-2 flex gap-1">
-                          {p.badges?.map(b => <Badge key={b} className="text-white" style={{background:t.primaryColor}}>{b}</Badge>)}
-                          {p.discountPrice && <Badge variant="destructive">Save {inr(p.price-p.discountPrice)}</Badge>}
-                        </div>
-                        {!p.available && <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-semibold">Sold out</div>}
-                      </div>
-                      <div className="p-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <Link href={`/t/${slug}/product/${p.id}`} className="font-semibold hover:underline">{p.name}</Link>
-                          {p.rating && <div className="flex items-center gap-0.5 text-xs bg-green-100 text-green-700 rounded px-1.5 py-0.5"><Star className="h-3 w-3 fill-green-700" />{p.rating}</div>}
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{p.description}</p>
-                        <div className="mt-3 flex items-center justify-between">
-                          <div>
-                            {p.discountPrice ? (
-                              <div className="flex items-baseline gap-2">
-                                <span className="font-bold">{inr(p.discountPrice)}</span>
-                                <span className="text-xs text-muted-foreground line-through">{inr(p.price)}</span>
+                {prods.map((p, i) => {
+                  const categoryName = getCategoryName(p, data.categories)
+                  const sizeLabel = getSizeLabel(p)
+                  const discountPercent = getDiscountPercent(p)
+                  const isBestseller = p.badges?.some((b) => /bestseller|popular/i.test(b))
+                  const displayDiet = detectDiet(p)
+                  return (
+                    <motion.div key={p.id} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{delay: 0.03*i}}>
+                      <Card className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-[4px] hover:shadow-xl" style={{ width: '560px' }}>
+                        <div className="grid h-full min-h-[210px] gap-5 p-[20px] md:grid-cols-[160px_minmax(240px,1fr)_150px] items-center">
+                          <Link href={`/t/${slug}/product/${p.id}`} className="group relative block h-[160px] w-[160px] overflow-hidden rounded-xl bg-slate-100 transition duration-300 hover:scale-[1.03]">
+                            {p.images?.[0] ? (
+                              <img loading="lazy" src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400 text-4xl">🍽️</div>
+                            )}
+                            <div className="absolute top-4 left-4">
+                              {isBestseller && <span className="rounded-full bg-amber-500 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">BESTSELLER</span>}
+                            </div>
+                            {p.discountPrice && discountPercent && (
+                              <span className="absolute top-4 right-4 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">{discountPercent}% OFF</span>
+                            )}
+                            <div className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
+                              <span className={`h-2.5 w-2.5 rounded-full ${displayDiet === 'veg' ? 'bg-emerald-500' : displayDiet === 'nonveg' ? 'bg-rose-600' : 'bg-slate-400'}`} />
+                              {displayDiet === 'veg' ? 'Veg' : displayDiet === 'nonveg' ? 'Non-Veg' : 'All'}
+                            </div>
+                          </Link>
+
+                          <div className="flex h-full flex-col justify-center gap-3">
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <Link href={`/t/${slug}/product/${p.id}`} className="min-w-0 text-[22px] font-semibold leading-[1.3] text-slate-900 line-clamp-2 hover:underline">
+                                  {p.name}
+                                </Link>
+                                {p.rating && (
+                                  <div className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-sm font-semibold text-amber-700">
+                                    <Star className="h-4 w-4" />{p.rating}
+                                  </div>
+                                )}
                               </div>
-                            ) : <span className="font-bold">{inr(p.price)}</span>}
+                              <p className="text-sm leading-6 text-slate-500 line-clamp-2">{p.description}</p>
+                              <div className="space-y-2 text-sm text-slate-500">
+                                {categoryName && <div><span className="font-medium text-slate-700">Category:</span> {categoryName}</div>}
+                                {sizeLabel && <div><span className="font-medium text-slate-700">Weight:</span> {sizeLabel}</div>}
+                                {(p.deliveryTime || data.deliveryTime) && <div><span className="font-medium text-slate-700">Delivery:</span> {p.deliveryTime || data.deliveryTime}</div>}
+                              </div>
+                            </div>
                           </div>
-                          {(p.variants?.length || p.addons?.length || p.isEggOption) ? (
-                            <Link href={`/t/${slug}/product/${p.id}`}>
-                              <Button size="sm" style={{background: t.primaryColor, color:'white'}}>Customize</Button>
-                            </Link>
-                          ) : (
-                            <Button size="sm" disabled={!p.available} onClick={()=>quickAdd(p)} style={{background: t.primaryColor, color:'white'}}>
-                              <Plus className="h-4 w-4 mr-1"/>Add
-                            </Button>
-                          )}
+
+                          <div className="flex h-full min-w-[150px] flex-shrink-0 flex-col justify-between text-right">
+                            <div className="space-y-2 overflow-visible">
+                              <div className="text-[32px] font-bold text-slate-900">{inr(p.discountPrice || p.price)}</div>
+                              {p.discountPrice && (
+                                <div className="space-y-1">
+                                  <div className="text-sm text-slate-500 line-through">{inr(p.price)}</div>
+                                  <div className="text-sm font-semibold text-emerald-600">{discountPercent}% OFF</div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex justify-end">
+                              <Link href={`/t/${slug}/product/${p.id}`}>
+                                <Button className="h-[44px] w-[140px] rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors">
+                                  + Customize →
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </Card>
-                  </motion.div>
-                ))}
+                      </Card>
+                    </motion.div>
+                  )
+                })}
                 </AnimatePresence>
               </div>
             </section>
@@ -170,9 +242,30 @@ export default function StorefrontPage() {
         </motion.div>
       )}
 
-      <footer className="border-t bg-white/60 py-8 text-center text-xs text-muted-foreground">
-        {t.socialLinks?.instagram && <a href={t.socialLinks.instagram} className="inline-flex items-center gap-1 hover:underline"><Instagram className="h-3 w-3"/>Follow us</a>}
-        <div className="mt-2">Powered by Kirano</div>
+      <footer className="border-t bg-white/60 py-10">
+        <div className="container mx-auto px-4 grid gap-6 md:grid-cols-3 text-sm text-muted-foreground">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">{t.name}</h3>
+            <p className="mt-2 text-sm">{t.tagline}</p>
+            {t.address && <p className="mt-3 flex items-center gap-2"><MapPin className="h-4 w-4" />{t.address}</p>}
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Contact</h3>
+            <div className="mt-3 space-y-2">
+              {t.whatsappNumber && <a href={`https://wa.me/${t.whatsappNumber}`} className="flex items-center gap-2 hover:underline"><Phone className="h-4 w-4" />WhatsApp: {t.whatsappNumber}</a>}
+              {t.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4" />{t.phone}</div>}
+              {t.email && <a href={`mailto:${t.email}`} className="flex items-center gap-2 hover:underline"><span className="h-4 w-4 grid place-items-center">📧</span>{t.email}</a>}
+            </div>
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Follow</h3>
+            <div className="mt-3 space-y-2">
+              {t.socialLinks?.instagram && <a href={t.socialLinks.instagram} className="flex items-center gap-2 hover:underline"><Instagram className="h-4 w-4" />Instagram</a>}
+              {t.socialLinks?.facebook && <a href={t.socialLinks.facebook} className="flex items-center gap-2 hover:underline"><Facebook className="h-4 w-4" />Facebook</a>}
+            </div>
+          </div>
+        </div>
+        <div className="mt-8 text-center text-xs text-muted-foreground">Powered by Kirano</div>
       </footer>
 
       <style>{`.no-scrollbar::-webkit-scrollbar{display:none} .no-scrollbar{scrollbar-width:none}`}</style>
