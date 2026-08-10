@@ -18,6 +18,7 @@ import {
   Instagram,
   Plus,
   Facebook,
+  Minus,
 } from "lucide-react";
 import { useCart } from "@/lib/cart-store";
 
@@ -57,7 +58,7 @@ export default function StorefrontPage() {
   const [activeCat, setActiveCat] = useState(null);
   const [dietFilter, setDietFilter] = useState("all");
   const catRefs = useRef({});
-  const { items, setTenant, addItem } = useCart();
+  const { items, setTenant, addItem, removeItem, updateQty } = useCart();
 
   useEffect(() => {
     fetch(`/api/tenant/${slug}`)
@@ -217,7 +218,7 @@ export default function StorefrontPage() {
             {t.phone && (
               <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1">
                 <Phone className="h-3 w-3" />
-                <Link href={`+91-${t.phone}`}>+91-{t.phone}</Link>
+                <Link href={`tel:+91-${t.phone}`}>+91-{t.phone}</Link>
               </span>
             )}
           </div>
@@ -264,7 +265,7 @@ export default function StorefrontPage() {
                 <span>{c.icon}</span>
                 {c.name}
               </h2>
-              <div className="grid gap-2 md:grid-cols-3">
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
                 <AnimatePresence>
                   {prods.map((p, i) => {
                     const discountPercent = getDiscountPercent(p);
@@ -308,7 +309,7 @@ export default function StorefrontPage() {
                                     : "All"}
                               </div>
                               {isBestseller && (
-                                <span className="absolute bottom-4 left-4 rounded-full bg-amber-500 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
+                                <span className="absolute bottom-4 left-4 rounded-full bg-amber-500 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
                                   BESTSELLER
                                 </span>
                               )}
@@ -335,43 +336,94 @@ export default function StorefrontPage() {
                                     </div>
 
                                     {p.discountPrice && discountPercent && (
-                                      <span className="rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
+                                      <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
                                         {discountPercent}% OFF
                                       </span>
                                     )}
                                   </div>
 
                                   {/* Customize Button */}
-                                  <div className="sm:mt-2 flex justify-end">
-                                    {p.variants?.length ||
-                                    p.addons?.length ||
-                                    p.isEggOption ? (
-                                      <Link href={`/t/${slug}/product/${p.id}`}>
-                                        <Button
-                                          size="sm"
-                                          style={{
-                                            background: t.primaryColor,
-                                            color: "white",
-                                          }}
-                                        >
-                                          + Customize →
-                                        </Button>
-                                      </Link>
-                                    ) : (
+                                  {p.variants?.length ||
+                                  p.addons?.length ||
+                                  p.isEggOption ? (
+                                    <Link href={`/t/${slug}/product/${p.id}`}>
                                       <Button
+                                        className="w-full mt-2"
                                         size="sm"
-                                        disabled={!p.available}
-                                        onClick={() => quickAdd(p)}
                                         style={{
                                           background: t.primaryColor,
                                           color: "white",
                                         }}
                                       >
-                                        <Plus className="h-4 w-4 mr-1" />
-                                        Add
+                                        Customize →
                                       </Button>
-                                    )}
-                                  </div>
+                                    </Link>
+                                  ) : (
+                                    <>
+                                      {cartCounts[p.id] > 0 ? (
+                                        <div
+                                          className="flex w-1/3 mt-2 h-9 items-center rounded-lg border overflow-hidden"
+                                          style={{
+                                            borderColor: t.primaryColor,
+                                          }}
+                                        >
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const item = items.find(
+                                                (i) =>
+                                                  i.productId === p.id &&
+                                                  !i.variantLabel,
+                                              );
+
+                                              if (item) {
+                                                if (item.qty > 1) {
+                                                  updateQty(
+                                                    item.lineId,
+                                                    item.qty - 1,
+                                                  );
+                                                } else {
+                                                  removeItem(item.lineId);
+                                                }
+                                              }
+                                            }}
+                                            className="flex grid-col-1 h-full w-1/3 items-center justify-center hover:bg-neutral-100"
+                                          >
+                                            <Minus className="h-4 w-4" />
+                                          </button>
+
+                                          <span className="flex w-1/3 h-full min-w-8 items-center justify-center px-1 text-sm font-bold">
+                                            {cartCounts[p.id]}
+                                          </span>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => quickAdd(p)}
+                                            className="flex h-full w-1/3 items-center justify-center text-white"
+                                            style={{
+                                              background: t.primaryColor,
+                                            }}
+                                          >
+                                            <Plus className="h-4 w-4" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <Button
+                                          className="mt-2"
+                                          size="sm"
+                                          disabled={!p.available}
+                                          onClick={() => quickAdd(p)}
+                                          style={{
+                                            background: t.primaryColor,
+                                            color: "white",
+                                          }}
+                                        >
+                                          <Plus className="h-4 w-4 mr-1" />
+                                          Add
+                                        </Button>
+                                      )}
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -410,7 +462,7 @@ export default function StorefrontPage() {
         </motion.div>
       )}
 
-      <footer className="border-t bg-white/60 py-10">
+      <footer className="border-t bg-white/60 pt-10">
         <div className="container mx-auto px-4 grid gap-6 md:grid-cols-3 text-sm text-muted-foreground">
           <div>
             <h3 className="text-base font-semibold text-foreground">
@@ -477,8 +529,25 @@ export default function StorefrontPage() {
             </div>
           </div>
         </div>
-        <div className="mt-8 text-center text-xs text-muted-foreground">
-          Powered by Kirano
+        <div
+          className="px-4 py-5 text-center mt-8 border-t border-white/20"
+          style={{ backgroundColor: t.primaryColor }}
+        >
+          <p className="text-xs text-white/80">
+            🇮🇳 Made with <span className="text-red-300">❤️</span> in India
+            <span className="mx-2 text-white/30">·</span>
+            Powered by{" "}
+            <a
+              href="/"
+              className="font-semibold text-white hover:opacity-80 transition-opacity"
+            >
+              Indocia
+            </a>
+          </p>
+
+          <p className="mt-2 text-[10px] text-white/50">
+            © {new Date().getFullYear()} Indocia · All rights reserved
+          </p>
         </div>
       </footer>
 
