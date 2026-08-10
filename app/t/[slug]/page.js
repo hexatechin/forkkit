@@ -300,13 +300,9 @@ export default function StorefrontPage() {
                               )}
                               <div className="absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
                                 <span
-                                  className={`h-2.5 w-2.5 rounded-full ${displayDiet === "veg" ? "bg-emerald-500" : displayDiet === "nonveg" ? "bg-rose-600" : "bg-slate-400"}`}
+                                  className={`h-2.5 w-2.5 rounded-full ${displayDiet === "nonveg" ? "bg-rose-600" : "bg-emerald-500"}`}
                                 />
-                                {displayDiet === "veg"
-                                  ? "Veg"
-                                  : displayDiet === "nonveg"
-                                    ? "Non-Veg"
-                                    : "All"}
+                                {displayDiet === "nonveg" ? "Non-Veg" : "Veg"}
                               </div>
                               {isBestseller && (
                                 <span className="absolute bottom-4 left-4 rounded-full bg-amber-500 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
