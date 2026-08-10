@@ -362,7 +362,7 @@ export default function StorefrontPage() {
                                     <>
                                       {cartCounts[p.id] > 0 ? (
                                         <div
-                                          className="flex w-1/3 mt-2 h-9 items-center rounded-lg border overflow-hidden"
+                                          className="flex md:w-1/2 mt-2 h-8 items-center rounded-lg border overflow-hidden"
                                           style={{
                                             borderColor: t.primaryColor,
                                           }}
