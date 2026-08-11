@@ -144,8 +144,12 @@ export default function SignupPage() {
           ← Back home
         </Link>
         <div className="mt-4 mb-6 text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white text-xl font-black shadow-lg">
-            i
+          <div className="inline-flex h-12 w-28 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white text-xl font-black shadow-lg">
+            <img
+              src="/indocia.png"
+              alt="Indocia"
+              className="h-12 w-28 rounded-xl object-cover"
+            />
           </div>
           <h1 className="mt-3 text-3xl font-black">Create your storefront</h1>
           <p className="text-sm text-muted-foreground">Step {step} of 3</p>

@@ -134,12 +134,34 @@ export default function CartPage() {
                   animate={{ opacity: 1, y: 0 }}
                 >
                   <Card className="p-4 flex gap-4">
-                    {i.image && (
-                      <img
-                        src={i.image}
-                        className="h-20 w-20 rounded-lg object-cover"
-                      />
-                    )}
+                    <div className="relative h-20 w-20 overflow-hidden rounded-lg bg-neutral-100">
+                      {i.image ? (
+                        <img
+                          src={i.image}
+                          alt={i.name}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-3xl">
+                          🍽️
+                        </div>
+                      )}
+
+                      {i.diet && i.diet !== "all" && (
+                        <div className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-full bg-white/90 px-1 py-1 text-[10px] font-semibold text-slate-900 shadow-sm backdrop-blur">
+                          <span
+                            className={`h-2 w-2 rounded-full ${
+                              i.diet === "nonveg"
+                                ? "bg-rose-600"
+                                : "bg-emerald-500"
+                            }`}
+                          />
+                        </div>
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold">{i.name}</div>
                       {i.variantLabel && (

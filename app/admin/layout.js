@@ -97,10 +97,13 @@ export default function AdminLayout({ children }) {
           <Menu className="h-5 w-5" />
         </button>
         <div className="flex items-center gap-2 font-bold">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white text-sm">
-            i
+          <span className="inline-flex h-12 w-28 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white text-sm">
+            <img
+              src="/indocia.png"
+              alt="Indocia"
+              className="h-12 w-28 rounded-xl object-cover"
+            />
           </span>
-          Indocia
         </div>
         <div className="w-9" />
       </header>
@@ -120,10 +123,13 @@ export default function AdminLayout({ children }) {
       >
         <div className="flex items-center justify-between font-bold px-4 py-4 lg:py-5">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white shadow">
-              i
+            <span className="inline-flex h-12 w-28 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white shadow">
+              <img
+                src="/indocia.png"
+                alt="Indocia"
+                className="h-12 w-28 rounded-xl object-cover"
+              />
             </span>
-            Indocia
           </div>
           <button
             onClick={() => setSidebarOpen(false)}

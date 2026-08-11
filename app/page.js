@@ -54,10 +54,13 @@ export default function Landing() {
       <nav className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-neutral-950/70 border-b border-white/10">
         <div className="container mx-auto px-6 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white shadow-lg shadow-rose-500/30">
-              i
+            <span className="inline-flex h-10 w-24 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white shadow-lg shadow-rose-500/30">
+              <img
+                src="/indocia.png"
+                alt="Indocia"
+                className="h-12 w-24 rounded-xl object-cover"
+              />
             </span>
-            Indocia
           </Link>
           <div className="flex items-center gap-3">
             <Link

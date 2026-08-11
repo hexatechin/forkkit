@@ -127,6 +127,7 @@ export default function StorefrontPage() {
       unitPrice,
       variantLabel: null,
       addons: [],
+      diet: p.diet || "veg",
     });
   };
 
@@ -146,16 +147,16 @@ export default function StorefrontPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
         <div className="absolute top-4 left-4 right-4 flex justify-between items-center gap-3">
           <div className="flex flex-row gap-2">
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 gap-3">
               {t.logo && (
                 <img
                   src={t.logo}
                   alt={t.name}
-                  className="h-14 w-14 rounded-full border-2 border-white object-cover"
+                  className="h-14 w-14 shrink-0 rounded-full border-2 border-white object-cover"
                 />
               )}
             </div>
-            <div>
+            <div className="min-w-0">
               <h1
                 className="text-3xl md:text-4xl font-black drop-shadow"
                 style={{ color: t.primaryColor }}
@@ -163,7 +164,9 @@ export default function StorefrontPage() {
                 {t.name}
               </h1>
               <p className="text-sm md:text-base opacity-90 text-white">
-                {t.tagline}
+                {t.tagline?.length > 175
+                  ? `${t.tagline.slice(0, 175)}...`
+                  : t.tagline}
               </p>
             </div>
           </div>
@@ -286,18 +289,37 @@ export default function StorefrontPage() {
                               href={`/t/${slug}/product/${p.id}`}
                               className="group relative block h-[160px] w-[160px] overflow-hidden rounded-xl bg-slate-100 transition duration-300 hover:scale-[1.03]"
                             >
-                              {p.images?.[0] ? (
-                                <img
-                                  loading="lazy"
-                                  src={p.images[0]}
-                                  alt={p.name}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400 text-4xl">
+                              <div className="relative h-full w-full">
+                                {p.images?.[0] ? (
+                                  <img
+                                    loading="lazy"
+                                    src={p.images[0]}
+                                    alt={p.name}
+                                    className="h-full w-full object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none";
+
+                                      const fallback =
+                                        e.currentTarget.parentElement?.querySelector(
+                                          ".image-fallback",
+                                        );
+
+                                      if (fallback) {
+                                        fallback.classList.remove("hidden");
+                                        fallback.classList.add("flex");
+                                      }
+                                    }}
+                                  />
+                                ) : null}
+
+                                <div
+                                  className={`image-fallback absolute inset-0 items-center justify-center bg-slate-100 text-slate-400 text-4xl ${
+                                    p.images?.[0] ? "hidden" : "flex"
+                                  }`}
+                                >
                                   🍽️
                                 </div>
-                              )}
+                              </div>
                               <div className="absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
                                 <span
                                   className={`h-2.5 w-2.5 rounded-full ${displayDiet === "nonveg" ? "bg-rose-600" : "bg-emerald-500"}`}

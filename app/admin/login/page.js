@@ -11,8 +11,8 @@ import { LogIn } from "lucide-react";
 
 export default function AdminLogin() {
   const router = useRouter();
-  const [email, setEmail] = useState("owner@royalbakery.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const submit = async (e) => {
@@ -45,8 +45,12 @@ export default function AdminLogin() {
           ← Back home
         </Link>
         <div className="mt-4 mb-6 text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white text-xl font-black shadow-lg">
-            i
+          <div className="inline-flex h-12 w-28 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white text-xl font-black shadow-lg">
+            <img
+              src="/indocia.png"
+              alt="Indocia"
+              className="h-12 w-28 rounded-xl object-cover"
+            />
           </div>
           <h1 className="mt-3 text-2xl font-bold">Indocia Admin</h1>
           <p className="text-sm text-muted-foreground">
@@ -83,11 +87,6 @@ export default function AdminLogin() {
             )}
           </Button>
         </form>
-        <div className="mt-6 text-xs text-muted-foreground text-center">
-          <div>Try either demo owner:</div>
-          <div className="mt-1">owner@royalbakery.com / password123</div>
-          <div>owner@sunrisecafe.com / password123</div>
-        </div>
       </Card>
     </div>
   );
