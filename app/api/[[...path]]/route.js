@@ -179,7 +179,7 @@ async function route(request, method, segments) {
         rating: p.rating || null,
         badges: p.badges || [],
         available: true,
-        diet: p.diet || 'veg',
+        diet: p.diet || "veg",
         allowCakeMessage: !!p.allowCakeMessage,
         variants: (p.variants || []).map((v) => ({
           id: uuid(),
@@ -510,7 +510,8 @@ async function route(request, method, segments) {
     });
     lines.push("");
     lines.push(`*Subtotal:* ₹${subtotal.toLocaleString("en-IN")}`);
-    if (deliveryFee) lines.push(`*Delivery:* ₹${deliveryFee.toLocaleString("en-IN")}`);
+    if (deliveryFee)
+      lines.push(`*Delivery:* ₹${deliveryFee.toLocaleString("en-IN")}`);
     lines.push(`*Total:* *₹${total.toLocaleString("en-IN")}*`);
     if (notes) {
       lines.push("");
@@ -566,6 +567,117 @@ async function route(request, method, segments) {
         primaryColor: tenant.primaryColor,
       },
     });
+  }
+
+  // ADMIN GOOGLE AUTH
+  if (path === "/admin/auth/google" && method === "POST") {
+    try {
+      const { credential } = await request.json();
+
+      if (!credential) {
+        return err("Google credential is required", 400);
+      }
+
+      // Verify Google ID token
+      const response = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(
+          credential,
+        )}`,
+      );
+
+      if (!response.ok) {
+        return err("Invalid Google credential", 401);
+      }
+
+      const googleUser = await response.json();
+
+      const googleClientId = process.env.GOOGLE_CLIENT_ID;
+
+      // Make sure token belongs to our Google application
+      if (!googleClientId || googleUser.aud !== googleClientId) {
+        return err("Invalid Google client", 401);
+      }
+
+      const email = (googleUser.email || "").toLowerCase();
+
+      if (!email) {
+        return err("Google account email not available", 401);
+      }
+
+      // Google should confirm the email
+      if (googleUser.email_verified !== "true") {
+        return err("Google email is not verified", 401);
+      }
+
+      // Find existing user
+      const { rows: userRows } = await db.query(
+        `SELECT id,
+              tenantId AS "tenantId",
+              email,
+              name,
+              role
+       FROM users
+       WHERE email=$1`,
+        [email],
+      );
+
+      const user = userRows[0];
+
+      // Don't create an admin automatically
+      if (!user) {
+        return err("No admin account exists for this Google email", 403);
+      }
+
+      // Only admin users can use Google admin login
+      if (!["owner", "manager", "super_admin"].includes(user.role)) {
+        return err("You do not have admin access", 403);
+      }
+
+      // Get tenant
+      const { rows: tenantRows } = await db.query(
+        `SELECT slug, name, primaryColor
+       FROM tenants
+       WHERE id=$1`,
+        [user.tenantId],
+      );
+
+      const tenant = tenantRows[0];
+
+      if (!tenant) {
+        return err("Tenant not found", 404);
+      }
+
+      // Use the SAME JWT system as normal login
+      const token = signToken({
+        userId: user.id,
+        tenantId: user.tenantId,
+        role: user.role,
+        email: user.email,
+        name: user.name,
+      });
+
+      // Return SAME response structure as normal login
+      return json({
+        token,
+
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
+
+        tenant: {
+          slug: tenant.slug,
+          name: tenant.name,
+          primaryColor: tenant.primaryColor,
+        },
+      });
+    } catch (error) {
+      console.error("Google admin login error:", error);
+
+      return err("Google login failed", 500);
+    }
   }
 
   if (path === "/admin/me" && method === "GET") {
@@ -666,7 +778,7 @@ async function route(request, method, segments) {
         product.rating || null,
         jsonValue(product.badges),
         product.available,
-        product.diet || 'veg',
+        product.diet || "veg",
         product.allowCakeMessage || false,
         jsonValue(product.variants),
         jsonValue(product.addons),
@@ -700,7 +812,8 @@ async function route(request, method, segments) {
     const body = await request.json();
     const { name, icon } = body;
     if (!name) return err("Missing category name");
-    const { customVariants, customAddons, customFlags } = normalizeCategoryTemplate(body);
+    const { customVariants, customAddons, customFlags } =
+      normalizeCategoryTemplate(body);
     const { rows } = await db.query(
       `SELECT COALESCE(MAX(order_index),0)+1 AS next_order FROM categories WHERE tenantId=$1`,
       [user.tenantId],
@@ -711,7 +824,11 @@ async function route(request, method, segments) {
       `INSERT INTO categories (id, tenantId, name, order_index, icon, customVariants, customAddons, customFlags)
        VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb)`,
       [
-        id, user.tenantId, name, order_index, icon || null,
+        id,
+        user.tenantId,
+        name,
+        order_index,
+        icon || null,
         JSON.stringify(customVariants || []),
         JSON.stringify(customAddons || []),
         JSON.stringify(customFlags || {}),
@@ -747,9 +864,18 @@ async function route(request, method, segments) {
       const setParts = [];
       const values = [];
       let idx = 1;
-      if (body.name !== undefined) { setParts.push(`name=$${idx++}`); values.push(body.name); }
-      if (body.icon !== undefined) { setParts.push(`icon=$${idx++}`); values.push(body.icon); }
-      if (body.order_index !== undefined) { setParts.push(`order_index=$${idx++}`); values.push(body.order_index); }
+      if (body.name !== undefined) {
+        setParts.push(`name=$${idx++}`);
+        values.push(body.name);
+      }
+      if (body.icon !== undefined) {
+        setParts.push(`icon=$${idx++}`);
+        values.push(body.icon);
+      }
+      if (body.order_index !== undefined) {
+        setParts.push(`order_index=$${idx++}`);
+        values.push(body.order_index);
+      }
       if (body.customVariants !== undefined) {
         const { customVariants } = normalizeCategoryTemplate(body);
         setParts.push(`customVariants=$${idx++}::jsonb`);
@@ -760,10 +886,13 @@ async function route(request, method, segments) {
         setParts.push(`customAddons=$${idx++}::jsonb`);
         values.push(JSON.stringify(customAddons));
       }
-      if (body.customFlags !== undefined) { setParts.push(`customFlags=$${idx++}::jsonb`); values.push(JSON.stringify(body.customFlags)); }
+      if (body.customFlags !== undefined) {
+        setParts.push(`customFlags=$${idx++}::jsonb`);
+        values.push(JSON.stringify(body.customFlags));
+      }
       if (setParts.length) {
         await db.query(
-          `UPDATE categories SET ${setParts.join(", ")} WHERE id=$${idx} AND tenantId=$${idx+1}`,
+          `UPDATE categories SET ${setParts.join(", ")} WHERE id=$${idx} AND tenantId=$${idx + 1}`,
           [...values, cid, user.tenantId],
         );
       }
