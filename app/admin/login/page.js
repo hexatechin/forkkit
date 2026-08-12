@@ -185,7 +185,10 @@ export default function AdminLogin() {
                 </span>
               </div>
             </div>
-            <div id="google-login" />
+            <div
+              id="google-login"
+              className="w-full flex justify-center overflow-hidden"
+            />
           </form>
         </Card>
       </div>
