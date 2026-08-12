@@ -90,7 +90,7 @@ export default function AdminDashboard() {
   );
 
   const storefrontUrl = tenant
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/t/${tenant.slug}`
+    ? `${typeof window !== "undefined" ? (window.location.hostname.includes("indocia") ? `${tenant.slug}.${window.location.hostname}` : window.location.origin) : ""}/t/${tenant.slug}`
     : "";
   const qrUrl = storefrontUrl
     ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(storefrontUrl)}`
@@ -214,7 +214,7 @@ export default function AdminDashboard() {
                 </Button>
               </div>
               <Link
-                href={`/t/${tenant.slug}`}
+                href={`${tenant.slug}.${window.location.host}`}
                 target="_blank"
                 className="block"
               >

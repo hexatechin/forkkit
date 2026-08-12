@@ -103,7 +103,7 @@ export default function CartPage() {
     >
       <div className="container mx-auto px-4 py-6 max-w-5xl">
         <Link
-          href={`/t/${slug}`}
+          href={`/`}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -115,7 +115,7 @@ export default function CartPage() {
           <Card className="p-10 text-center">
             <ShoppingBag className="h-12 w-12 mx-auto text-neutral-300" />
             <p className="mt-4 text-muted-foreground">Your cart is empty</p>
-            <Link href={`/t/${slug}`}>
+            <Link href={`/`}>
               <Button
                 className="mt-4"
                 style={{ background: tenant.primaryColor, color: "white" }}
