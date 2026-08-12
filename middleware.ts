@@ -2,23 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") || "";
-
   const host = hostname.split(":")[0];
 
-  const parts = host.split(".");
+  const baseDomain = "indocia.in";
 
-  // Example:
-  // royal.yourdomain.com
-  // parts = ["royal", "yourdomain", "com"]
+  // sunrisecafe.indocia.in
+  if (host.endsWith(`.${baseDomain}`)) {
+    const subdomain = host.replace(`.${baseDomain}`, "");
 
-  if (parts.length >= 3) {
-    const subdomain = parts[0];
+    // Ignore www
+    if (subdomain && subdomain !== "www") {
+      const url = request.nextUrl.clone();
 
-    const url = request.nextUrl.clone();
+      // Internally rewrite:
+      // sunrisecafe.indocia.in
+      //          ↓
+      // /t/sunrisecafe
+      url.pathname = `/t/${subdomain}${url.pathname}`;
 
-    url.pathname = `/store/${subdomain}${url.pathname}`;
-
-    return NextResponse.rewrite(url);
+      return NextResponse.rewrite(url);
+    }
   }
 
   return NextResponse.next();
