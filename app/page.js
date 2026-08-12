@@ -21,6 +21,8 @@ export default function Landing() {
   const my = useMotionValue(0);
   const rotX = useTransform(my, [-0.5, 0.5], [8, -8]);
   const rotY = useTransform(mx, [-0.5, 0.5], [-12, 12]);
+  const _hostname =
+    typeof window !== "undefined" ? window.location.hostname : "";
 
   useEffect(() => {
     fetch("/api/seed", { method: "POST" }).finally(() => {
@@ -494,7 +496,7 @@ Order ID: 8A2F91
                 transformStyle: "preserve-3d",
               }}
             >
-              <Link href={`/t/${t.slug}`}>
+              <Link href={`${t.slug}.${_hostname}`}>
                 <Card className="overflow-hidden cursor-pointer bg-white/5 border-white/10 hover:border-white/40 transition-all">
                   <div
                     className="h-44 relative"
@@ -507,7 +509,7 @@ Order ID: 8A2F91
                     <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
                     <div className="absolute bottom-3 left-3 right-3 text-white">
                       <div className="text-[10px] uppercase tracking-wider opacity-70">
-                        {t.slug}.indocia.app
+                        {t.slug}.indocia.in
                       </div>
                       <div className="text-lg font-bold">{t.name}</div>
                     </div>

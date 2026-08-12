@@ -164,7 +164,10 @@ export default function AdminLayout({ children }) {
             </div>
           </div>
           {tenant?.slug && (
-            <Link href={`/t/${tenant.slug}`} target="_blank">
+            <Link
+              href={`${tenant.slug}.${window.location.host}`}
+              target="_blank"
+            >
               <Button variant="outline" size="sm" className="w-full mb-2">
                 <Store className="h-3.5 w-3.5 mr-2" />
                 View storefront

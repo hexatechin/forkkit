@@ -189,7 +189,7 @@ export default function StorefrontPage() {
                 </button>
               ))}
             </div>
-            <Link href={`/t/${slug}/cart`}>
+            <Link href={`//cart`}>
               <div className="relative bg-white rounded-full h-10 w-10 flex items-center justify-center shadow-lg">
                 <ShoppingBag
                   className="h-5 w-5"
@@ -286,7 +286,7 @@ export default function StorefrontPage() {
                         <Card className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-[4px] hover:shadow-xl">
                           <div className="grid h-full min-h-[210px] gap-3 p-[10px] grid-cols-[160px_minmax(0,1fr)] items-center">
                             <Link
-                              href={`/t/${slug}/product/${p.id}`}
+                              href={`//product/${p.id}`}
                               className="group relative block h-[160px] w-[160px] overflow-hidden rounded-xl bg-slate-100 transition duration-300 hover:scale-[1.03]"
                             >
                               <div className="relative h-full w-full">
@@ -337,7 +337,7 @@ export default function StorefrontPage() {
                               <div className="space-y-3">
                                 <div className="flex items-start justify-between gap-3">
                                   <Link
-                                    href={`/t/${slug}/product/${p.id}`}
+                                    href={`//product/${p.id}`}
                                     className="min-w-0 text-[15px] font-semibold leading-[1.3] text-slate-900 line-clamp-2 hover:underline"
                                   >
                                     {p.name}
@@ -364,7 +364,7 @@ export default function StorefrontPage() {
                                   {p.variants?.length ||
                                   p.addons?.length ||
                                   p.isEggOption ? (
-                                    <Link href={`/t/${slug}/product/${p.id}`}>
+                                    <Link href={`//product/${p.id}`}>
                                       <Button
                                         className="w-full mt-2"
                                         size="sm"
@@ -463,7 +463,7 @@ export default function StorefrontPage() {
           animate={{ y: 0 }}
           className="fixed bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-96 z-30"
         >
-          <Link href={`/t/${slug}/cart`}>
+          <Link href={`//cart`}>
             <div
               className="rounded-2xl shadow-2xl px-5 py-3 flex items-center justify-between text-white cursor-pointer"
               style={{ background: t.primaryColor }}
@@ -556,7 +556,7 @@ export default function StorefrontPage() {
             <span className="mx-2 text-white/30">·</span>
             Powered by{" "}
             <a
-              href="/"
+              href="https://indocia.in"
               className="font-semibold text-white hover:opacity-80 transition-opacity"
             >
               Indocia

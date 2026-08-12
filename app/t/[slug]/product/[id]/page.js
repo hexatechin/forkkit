@@ -89,14 +89,14 @@ export default function ProductDetail() {
       diet: p.diet || "veg",
     });
     toast.success(`${p.name} added to cart`);
-    router.push(`/t/${slug}`);
+    router.push(`/`);
   };
 
   return (
     <div className="min-h-screen bg-neutral-50">
       <div className="container mx-auto px-4 py-6">
         <Link
-          href={`/t/${slug}`}
+          href={`/`}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="h-4 w-4" />

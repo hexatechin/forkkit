@@ -39,22 +39,6 @@ const TEMPLATES = [
     tint: "#fff7ed",
   },
   {
-    id: "florist",
-    label: "Florist",
-    icon: Flower2,
-    color: "#db2777",
-    accent: "#fbcfe8",
-    tint: "#fdf2f8",
-  },
-  {
-    id: "gift_shop",
-    label: "Gift shop",
-    icon: Gift,
-    color: "#7c3aed",
-    accent: "#ddd6fe",
-    tint: "#faf5ff",
-  },
-  {
     id: "tiffin",
     label: "Tiffin service",
     icon: UtensilsCrossed,
@@ -70,14 +54,30 @@ const TEMPLATES = [
     accent: "#99f6e4",
     tint: "#f0fdfa",
   },
-  {
-    id: "office_space",
-    label: "Office space",
-    icon: Briefcase,
-    color: "#1e40af",
-    accent: "#bfdbfe",
-    tint: "#eff6ff",
-  },
+  // {
+  //   id: "florist",
+  //   label: "Florist",
+  //   icon: Flower2,
+  //   color: "#db2777",
+  //   accent: "#fbcfe8",
+  //   tint: "#fdf2f8",
+  // },
+  // {
+  //   id: "gift_shop",
+  //   label: "Gift shop",
+  //   icon: Gift,
+  //   color: "#7c3aed",
+  //   accent: "#ddd6fe",
+  //   tint: "#faf5ff",
+  // },
+  // {
+  //   id: "office_space",
+  //   label: "Office space",
+  //   icon: Briefcase,
+  //   color: "#1e40af",
+  //   accent: "#bfdbfe",
+  //   tint: "#eff6ff",
+  // },
 ];
 
 export default function SignupPage() {
