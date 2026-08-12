@@ -392,7 +392,9 @@ export default function Landing() {
                   {s.n}
                 </div>
                 <s.icon className="h-7 w-7 mt-4 text-orange-400" />
-                <div className="mt-3 text-lg font-bold">{s.title}</div>
+                <div className="mt-3 text-lg font-bold text-white">
+                  {s.title}
+                </div>
                 <div className="mt-1 text-sm text-white/60">{s.desc}</div>
               </Card>
             </motion.div>
