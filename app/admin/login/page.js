@@ -185,35 +185,7 @@ export default function AdminLogin() {
                 </span>
               </div>
             </div>
-            {/* <Button
-              type="button"
-              variant="outline"
-              className="w-full h-11"
-              disabled={loading}
-              onClick={handleGoogleLogin}
-            >
-              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M21.35 12.27c0-.79-.07-1.55-.2-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 21.5c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.93-3.31.93-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.5z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M6.54 13.6a5.85 5.85 0 0 1 0-3.72V7.35H3.3a9.76 9.76 0 0 0 0 8.78l3.24-2.53z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.85c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.84 2.89 14.63 2 12 2a9.74 9.74 0 0 0-8.7 5.35l3.24 2.53C7.31 7.57 9.46 5.85 12 5.85z"
-                />
-              </svg>
-              Continue with Google
-            </Button> */}
-
-            <div id="google-login" className="flex justify-center" />
+            <div id="google-login" />
           </form>
         </Card>
       </div>
