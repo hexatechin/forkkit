@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getTenantUrl } from "@/lib/navigation";
 
 export default function AdminLayout({ children }) {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
+    if (!pathname || pathname == undefined) return;
     if (pathname === "/admin/login") {
       setReady(true);
       return;
@@ -164,10 +166,7 @@ export default function AdminLayout({ children }) {
             </div>
           </div>
           {tenant?.slug && (
-            <Link
-              href={`${tenant.slug}.${window.location.host}`}
-              target="_blank"
-            >
+            <Link href={getTenantUrl(tenant.slug)} target="_blank">
               <Button variant="outline" size="sm" className="w-full mb-2">
                 <Store className="h-3.5 w-3.5 mr-2" />
                 View storefront
