@@ -13,6 +13,7 @@ import {
   Zap,
   Shield,
 } from "lucide-react";
+import { getTenantUrl } from "@/lib/navigation";
 
 export default function Landing() {
   const [tenants, setTenants] = useState([]);
@@ -21,8 +22,6 @@ export default function Landing() {
   const my = useMotionValue(0);
   const rotX = useTransform(my, [-0.5, 0.5], [8, -8]);
   const rotY = useTransform(mx, [-0.5, 0.5], [-12, 12]);
-  const _hostname =
-    typeof window !== "undefined" ? window.location.hostname : "";
 
   useEffect(() => {
     fetch("/api/seed", { method: "POST" }).finally(() => {
@@ -496,7 +495,7 @@ Order ID: 8A2F91
                 transformStyle: "preserve-3d",
               }}
             >
-              <Link href={`${t.slug}.${_hostname}`}>
+              <Link href={getTenantUrl(t.slug)}>
                 <Card className="overflow-hidden cursor-pointer bg-white/5 border-white/10 hover:border-white/40 transition-all">
                   <div
                     className="h-44 relative"

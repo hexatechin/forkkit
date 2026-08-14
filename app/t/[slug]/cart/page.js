@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/lib/cart-store";
 import { toast } from "sonner";
+import { getTenantUrl } from "@/lib/navigation";
 
 const inr = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
 
@@ -37,6 +38,7 @@ export default function CartPage() {
   const [placing, setPlacing] = useState(false);
 
   useEffect(() => {
+    if (!slug) return;
     fetch(`/api/tenant/${slug}`)
       .then((r) => r.json())
       .then((d) => setTenantData(d.tenant));
@@ -103,7 +105,7 @@ export default function CartPage() {
     >
       <div className="container mx-auto px-4 py-6 max-w-5xl">
         <Link
-          href={`/`}
+          href={getTenantUrl(slug, "/")}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -115,7 +117,7 @@ export default function CartPage() {
           <Card className="p-10 text-center">
             <ShoppingBag className="h-12 w-12 mx-auto text-neutral-300" />
             <p className="mt-4 text-muted-foreground">Your cart is empty</p>
-            <Link href={`/`}>
+            <Link href={getTenantUrl(slug, "/")}>
               <Button
                 className="mt-4"
                 style={{ background: tenant.primaryColor, color: "white" }}

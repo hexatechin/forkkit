@@ -12,7 +12,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="http://localhost:3000/favicon-v2.ico" />
+        <link rel="icon" href="/favicon-v2.ico" />
         <script
           dangerouslySetInnerHTML={{
             __html:
