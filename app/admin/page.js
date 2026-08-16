@@ -325,7 +325,7 @@ ${storefrontUrl}
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {new Date(o.createdAt).toLocaleString()}
+                      {new Date(o.createdat).toLocaleString()}
                     </div>
                   </div>
                   <div className="font-bold text-sm">{inr(o.total)}</div>

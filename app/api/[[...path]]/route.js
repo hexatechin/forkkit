@@ -257,31 +257,51 @@ async function route(request, method, segments) {
       const next = new Date(d);
       next.setDate(next.getDate() + 1);
       const dayOrders = orders.filter((o) => {
-        const t = new Date(o.createdAt);
-        return t >= d && t < next;
+        // PostgreSQL returns createdAt as "createdat"
+        if (!o.createdat) return false;
+        const orderDate = new Date(o.createdat);
+        return orderDate >= d && orderDate < next;
       });
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
       days.push({
-        date: d.toISOString().slice(5, 10),
+        date: `${month}-${day}`,
         orders: dayOrders.length,
-        revenue: dayOrders.reduce((s, o) => s + o.total, 0),
+        revenue: dayOrders.reduce(
+          (sum, order) => sum + Number(order.total || 0),
+          0,
+        ),
       });
     }
     const productTotals = {};
-    orders.forEach((o) =>
-      o.items.forEach((i) => {
-        productTotals[i.name] = (productTotals[i.name] || 0) + i.qty;
-      }),
-    );
+    orders.forEach((order) => {
+      if (!Array.isArray(order.items)) return;
+      order.items.forEach((item) => {
+        if (!item?.name) return;
+        const qty = Number(item.qty || 0);
+        productTotals[item.name] = (productTotals[item.name] || 0) + qty;
+      });
+    });
     const top = Object.entries(productTotals)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([name, qty]) => ({ name, qty }));
+      .map(([name, qty]) => ({
+        name,
+        qty,
+      }));
+
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0,
+    );
+
     return json({
       days,
       top,
       totals: {
-        orders: orders.length,
-        revenue: orders.reduce((s, o) => s + o.total, 0),
+        orders: totalOrders,
+        revenue: totalRevenue,
       },
     });
   }
@@ -490,14 +510,13 @@ async function route(request, method, segments) {
 
     const lines = [];
 
-    lines.push(`🎉 *NEW ORDER FROM ${customer.name.toUpperCase()}*`);
-    lines.push(`━━━━━━━━━━━━━━━━━━━━`);
+    lines.push(`🎉 *New Order from ${customer.name.toUpperCase()}*`);
+    lines.push(``);
     lines.push(`👋 *Hi ${tenant.name}!*`);
     lines.push(`🧾 *Order:* #${orderId.slice(0, 8).toUpperCase()}`);
     lines.push("");
 
-    lines.push(`👤 *Customer Details*`);
-    lines.push(`👤 ${customer.name}`);
+    lines.push(`👤 *Customer:* ${customer.name}`);
     lines.push(`📞 ${customer.phone}`);
 
     if (mode === "delivery") {
@@ -523,8 +542,7 @@ async function route(request, method, segments) {
     }
 
     lines.push("");
-    lines.push(`🍽️ *ORDER ITEMS*`);
-    lines.push(`━━━━━━━━━━━━━━━━━━━━`);
+    lines.push(`🍽️ *Items:*`);
 
     items.forEach((i) => {
       const opts = [];
@@ -549,8 +567,6 @@ async function route(request, method, segments) {
     });
 
     lines.push("");
-    lines.push(`💳 *ORDER SUMMARY*`);
-    lines.push(`━━━━━━━━━━━━━━━━━━━━`);
 
     lines.push(`🧾 Subtotal: ₹${subtotal.toLocaleString("en-IN")}`);
 
@@ -567,7 +583,6 @@ async function route(request, method, segments) {
     }
 
     lines.push("");
-    lines.push(`━━━━━━━━━━━━━━━━━━━━`);
     lines.push(`✨ *Looking forward to it! Thank you!*`);
 
     const message = lines.join("\n");
