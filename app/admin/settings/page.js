@@ -143,6 +143,7 @@ export default function AdminSettings() {
             <Label>Business name</Label>
             <Input
               value={t.name || ""}
+              maxLength={50}
               onChange={(e) => set("name", e.target.value)}
             />
           </div>
@@ -152,6 +153,7 @@ export default function AdminSettings() {
             <Label>Tagline</Label>
             <Input
               value={t.tagline || ""}
+              maxLength={250}
               onChange={(e) => set("tagline", e.target.value)}
             />
           </div>
@@ -161,6 +163,7 @@ export default function AdminSettings() {
             <Label>WhatsApp number (with country code, digits only)</Label>
             <Input
               type="number"
+              maxLength={15}
               value={t.whatsappNumber || ""}
               onChange={(e) => set("whatsappNumber", e.target.value)}
               placeholder="919812345678"
@@ -172,6 +175,7 @@ export default function AdminSettings() {
             <Label>Phone</Label>
             <Input
               type="number"
+              maxLength={15}
               value={t.phone || ""}
               onChange={(e) => set("phone", e.target.value)}
             />
@@ -182,6 +186,7 @@ export default function AdminSettings() {
             <Label>Instagram URL</Label>
             <Input
               value={t.socialLinks?.instagram || ""}
+              maxLength={50}
               onChange={(e) => setSocial("instagram", e.target.value)}
               placeholder="https://instagram.com/yourshop"
             />
@@ -192,6 +197,7 @@ export default function AdminSettings() {
             <Label>Facebook URL</Label>
             <Input
               value={t.socialLinks?.facebook || ""}
+              maxLength={50}
               onChange={(e) => setSocial("facebook", e.target.value)}
               placeholder="https://facebook.com/yourshop"
             />
@@ -202,6 +208,7 @@ export default function AdminSettings() {
             <Label>Address</Label>
             <Input
               value={t.address || ""}
+              maxLength={150}
               onChange={(e) => set("address", e.target.value)}
             />
           </div>
@@ -234,6 +241,7 @@ export default function AdminSettings() {
 
                 <Input
                   value={t.logo || ""}
+                  maxLength={250}
                   onChange={(e) => set("logo", e.target.value)}
                   placeholder="Cloudinary logo URL"
                 />
@@ -276,6 +284,7 @@ export default function AdminSettings() {
 
               <Input
                 value={t.banner || ""}
+                maxLength={250}
                 onChange={(e) => set("banner", e.target.value)}
                 placeholder="Cloudinary banner URL"
               />
@@ -314,7 +323,15 @@ export default function AdminSettings() {
             <Input
               type="number"
               value={t.deliveryFee || 0}
-              onChange={(e) => set("deliveryFee", Number(e.target.value))}
+              maxLength={5}
+              onChange={(e) => {
+                if (
+                  Number(e.target.value) < 0 ||
+                  Number(e.target.value) > 99999
+                )
+                  return;
+                set("deliveryFee", Number(e.target.value));
+              }}
             />
           </div>
 
@@ -324,7 +341,15 @@ export default function AdminSettings() {
             <Input
               type="number"
               value={t.minOrder || 0}
-              onChange={(e) => set("minOrder", Number(e.target.value))}
+              maxLength={10}
+              onChange={(e) => {
+                if (
+                  Number(e.target.value) < 0 ||
+                  Number(e.target.value) > 99999
+                )
+                  return;
+                set("minOrder", Number(e.target.value));
+              }}
             />
           </div>
 
@@ -333,8 +358,13 @@ export default function AdminSettings() {
             <Label>Prep time (mins)</Label>
             <Input
               type="number"
+              maxLength={5}
               value={t.prepTimeMins || 0}
-              onChange={(e) => set("prepTimeMins", Number(e.target.value))}
+              onChange={(e) => {
+                if (Number(e.target.value) < 0 || Number(e.target.value) > 999)
+                  return;
+                set("prepTimeMins", Number(e.target.value));
+              }}
             />
           </div>
 
@@ -343,12 +373,14 @@ export default function AdminSettings() {
             <Label>Hours open</Label>
             <Input
               value={t.businessHours?.open || ""}
-              onChange={(e) =>
+              maxLength={10}
+              onChange={(e) => {
+                if (e.target.value.length > 10) return;
                 set("businessHours", {
                   ...(t.businessHours || {}),
                   open: e.target.value,
-                })
-              }
+                });
+              }}
             />
           </div>
 
@@ -357,6 +389,7 @@ export default function AdminSettings() {
             <Label>Hours close</Label>
             <Input
               value={t.businessHours?.close || ""}
+              maxLength={10}
               onChange={(e) =>
                 set("businessHours", {
                   ...(t.businessHours || {}),

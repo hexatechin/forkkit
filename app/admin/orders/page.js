@@ -34,7 +34,7 @@ export default function AdminOrders() {
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {new Date(o.createdAt).toLocaleString()}
+                    {new Date(o.createdat).toLocaleString()}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

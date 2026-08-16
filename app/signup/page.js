@@ -218,6 +218,7 @@ export default function SignupPage() {
                     <Input
                       placeholder="e.g. Sweet Crumbs Bakery"
                       value={f.businessName}
+                      maxLength={50}
                       onChange={(e) => set("businessName", e.target.value)}
                     />
                   </div>
@@ -226,6 +227,7 @@ export default function SignupPage() {
                     <Input
                       placeholder="Handcrafted with love"
                       value={f.tagline}
+                      maxLength={250}
                       onChange={(e) => set("tagline", e.target.value)}
                     />
                   </div>
@@ -234,6 +236,7 @@ export default function SignupPage() {
                     <Input
                       placeholder="Street, City"
                       value={f.address}
+                      maxLength={150}
                       onChange={(e) => set("address", e.target.value)}
                     />
                   </div>
@@ -275,6 +278,7 @@ export default function SignupPage() {
                     <Label>Your name *</Label>
                     <Input
                       value={f.ownerName}
+                      maxLength={20}
                       onChange={(e) => set("ownerName", e.target.value)}
                     />
                   </div>
@@ -283,6 +287,7 @@ export default function SignupPage() {
                     <Input
                       type="email"
                       value={f.email}
+                      maxLength={50}
                       onChange={(e) => set("email", e.target.value)}
                     />
                   </div>
@@ -292,6 +297,7 @@ export default function SignupPage() {
                       type="password"
                       placeholder="min 6 characters"
                       value={f.password}
+                      maxLength={20}
                       onChange={(e) => set("password", e.target.value)}
                     />
                   </div>
@@ -305,6 +311,7 @@ export default function SignupPage() {
                     <Input
                       placeholder="919812345678"
                       value={f.whatsappNumber}
+                      maxLength={15}
                       onChange={(e) =>
                         set("whatsappNumber", e.target.value.replace(/\D/g, ""))
                       }
@@ -314,6 +321,7 @@ export default function SignupPage() {
                     <Label>Phone (optional)</Label>
                     <Input
                       value={f.phone}
+                      maxLength={15}
                       onChange={(e) => set("phone", e.target.value)}
                     />
                   </div>

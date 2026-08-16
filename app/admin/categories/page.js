@@ -391,6 +391,7 @@ export default function AdminCategories() {
                   value={f.name}
                   onChange={(e) => setF({ ...f, name: e.target.value })}
                   autoFocus
+                  maxLength={30}
                 />
               </div>
               <div>
@@ -482,6 +483,7 @@ export default function AdminCategories() {
                         <Input
                           placeholder="Variant name (e.g. Size, Duration)"
                           value={v.name}
+                          maxLength={30}
                           onChange={(e) =>
                             updateVariant(vi, { name: e.target.value })
                           }
@@ -502,6 +504,7 @@ export default function AdminCategories() {
                             <Input
                               placeholder="Option label (e.g. 1 kg)"
                               value={o.label}
+                              maxLength={30}
                               onChange={(e) =>
                                 updateOption(vi, oi, { label: e.target.value })
                               }
@@ -558,6 +561,7 @@ export default function AdminCategories() {
                       <Input
                         placeholder="Add-on name (e.g. Candles, Extra shot)"
                         value={a.name}
+                        maxLength={30}
                         onChange={(e) =>
                           updateAddon(i, { name: e.target.value })
                         }

@@ -62,6 +62,7 @@ export default function StorefrontPage() {
   const { items, setTenant, addItem, removeItem, updateQty } = useCart();
 
   useEffect(() => {
+    if (!slug) return;
     fetch(`/api/tenant/${slug}`)
       .then((r) => r.json())
       .then((d) => {
@@ -242,13 +243,32 @@ export default function StorefrontPage() {
       </div>
 
       <div className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b mt-6">
-        <div className="container mx-auto px-4 py-3 flex flex-wrap items-center gap-2">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* All */}
+            <button
+              type="button"
+              onClick={() => setActiveCat("all")}
+              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition ${
+                activeCat === "all"
+                  ? "text-white shadow"
+                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+              }`}
+              style={activeCat === "all" ? { background: t.primaryColor } : {}}
+            >
+              🍽️ All
+            </button>
+
             {data.categories.map((c) => (
               <button
+                type="button"
                 key={c.id}
-                onClick={() => scrollToCat(c.id)}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition ${activeCat === c.id ? "text-white shadow" : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"}`}
+                onClick={() => setActiveCat(c.id)}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition ${
+                  activeCat === c.id
+                    ? "text-white shadow"
+                    : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+                }`}
                 style={activeCat === c.id ? { background: t.primaryColor } : {}}
               >
                 <span className="mr-1">{c.icon}</span>
@@ -259,12 +279,16 @@ export default function StorefrontPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 space-y-10 pb-32">
+      <div className="container mx-auto px-4 py-8 pb-32">
         {data.categories.map((c) => {
+          // When a category is selected, show only that category
+          if (activeCat !== "all" && activeCat !== c.id) {
+            return null;
+          }
           const prods = filtered[c.id] || [];
           if (!prods.length) return null;
           return (
-            <section key={c.id} ref={(el) => (catRefs.current[c.id] = el)}>
+            <section key={c.id} className="mb-10">
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 <span>{c.icon}</span>
                 {c.name}
@@ -284,11 +308,20 @@ export default function StorefrontPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.03 * i }}
                       >
-                        <Card className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-[4px] hover:shadow-xl">
+                        <Card
+                          className={`overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm transition-all duration-300 ${
+                            !p.available
+                              ? "opacity-75"
+                              : "hover:-translate-y-[4px] hover:shadow-xl"
+                          }`}
+                        >
                           <div className="grid h-full min-h-[210px] gap-3 p-[10px] grid-cols-[160px_minmax(0,1fr)] items-center">
-                            <Link
-                              href={getTenantUrl(slug, `//product/${p.id}`)}
-                              className="group relative block h-[160px] w-[160px] overflow-hidden rounded-xl bg-slate-100 transition duration-300 hover:scale-[1.03]"
+                            <div
+                              className={`group relative block h-[160px] w-[160px] overflow-hidden rounded-xl bg-slate-100 ${
+                                p.available
+                                  ? "transition duration-300 hover:scale-[1.03]"
+                                  : "cursor-not-allowed"
+                              }`}
                             >
                               <div className="relative h-full w-full">
                                 {p.images?.[0] ? (
@@ -296,7 +329,9 @@ export default function StorefrontPage() {
                                     loading="lazy"
                                     src={p.images[0]}
                                     alt={p.name}
-                                    className="h-full w-full object-cover"
+                                    className={`h-full w-full object-cover ${
+                                      !p.available ? "grayscale" : ""
+                                    }`}
                                     onError={(e) => {
                                       e.currentTarget.style.display = "none";
 
@@ -321,35 +356,58 @@ export default function StorefrontPage() {
                                   🍽️
                                 </div>
                               </div>
+
+                              {/* Unavailable Overlay */}
+                              {!p.available && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+                                  <span className="rounded-full bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-800 shadow-lg">
+                                    Unavailable
+                                  </span>
+                                </div>
+                              )}
+
                               <div className="absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
                                 <span
-                                  className={`h-2.5 w-2.5 rounded-full ${displayDiet === "nonveg" ? "bg-rose-600" : "bg-emerald-500"}`}
+                                  className={`h-2.5 w-2.5 rounded-full ${
+                                    displayDiet === "nonveg"
+                                      ? "bg-rose-600"
+                                      : "bg-emerald-500"
+                                  }`}
                                 />
                                 {displayDiet === "nonveg" ? "Non-Veg" : "Veg"}
                               </div>
-                              {isBestseller && (
+
+                              {isBestseller && p.available && (
                                 <span className="absolute bottom-4 left-4 rounded-full bg-amber-500 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
                                   BESTSELLER
                                 </span>
                               )}
-                            </Link>
+                            </div>
 
                             <div className="flex h-full flex-col justify-center gap-3">
                               <div className="space-y-3">
                                 <div className="flex items-start justify-between gap-3">
-                                  <Link
-                                    href={getTenantUrl(
-                                      slug,
-                                      `/product/${p.id}`,
-                                    )}
-                                    className="min-w-0 text-[15px] font-semibold leading-[1.3] text-slate-900 line-clamp-2 hover:underline"
-                                  >
-                                    {p.name}
-                                  </Link>
+                                  {p.available ? (
+                                    <Link
+                                      href={getTenantUrl(
+                                        slug,
+                                        `/product/${p.id}`,
+                                      )}
+                                      className="min-w-0 text-[15px] font-semibold leading-[1.3] text-slate-900 line-clamp-2 hover:underline"
+                                    >
+                                      {p.name}
+                                    </Link>
+                                  ) : (
+                                    <span className="min-w-0 text-[15px] font-semibold leading-[1.3] text-slate-500 line-clamp-2">
+                                      {p.name}
+                                    </span>
+                                  )}
                                 </div>
+
                                 <p className="text-[15px] leading-6 text-slate-500 line-clamp-2">
                                   {p.description}
                                 </p>
+
                                 <div className="flex flex-col justify-between sm:flex-row">
                                   {/* Price + Discount */}
                                   <div className="flex flex-row items-center gap-2 sm:flex-col sm:items-start sm:gap-2">
@@ -364,11 +422,24 @@ export default function StorefrontPage() {
                                     )}
                                   </div>
 
-                                  {/* Customize Button */}
-                                  {p.variants?.length ||
-                                  p.addons?.length ||
-                                  p.isEggOption ? (
-                                    <Link href={ getTenantUrl(slug, `/product/${p.id}`) }>
+                                  {/* Product Actions */}
+                                  {!p.available ? (
+                                    <Button
+                                      className="mt-2 cursor-not-allowed"
+                                      size="sm"
+                                      disabled
+                                    >
+                                      Unavailable
+                                    </Button>
+                                  ) : p.variants?.length ||
+                                    p.addons?.length ||
+                                    p.isEggOption ? (
+                                    <Link
+                                      href={getTenantUrl(
+                                        slug,
+                                        `/product/${p.id}`,
+                                      )}
+                                    >
                                       <Button
                                         className="w-full mt-2"
                                         size="sm"
