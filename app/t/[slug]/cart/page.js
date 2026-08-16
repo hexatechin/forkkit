@@ -26,11 +26,12 @@ export default function CartPage() {
   const { slug } = useParams();
   const [tenant, setTenantData] = useState(null);
   const { items, updateQty, removeItem, clear } = useCart();
-  const [mode, setMode] = useState("serve");
+  const [mode, setMode] = useState("dine-in");
   const [form, setForm] = useState({
     name: "",
     phone: "",
     address: "",
+    tableNumber: "",
     notes: "",
     occasion: "",
     scheduledAt: "",
@@ -57,6 +58,8 @@ export default function CartPage() {
       return toast.error("Name and phone are required");
     if (mode === "delivery" && !form.address)
       return toast.error("Delivery address is required");
+    if (mode === "dine-in" && !form.tableNumber)
+      return toast.error("Table number is required");
     if (belowMin)
       return toast.error(`Minimum order is ${inr(tenant.minOrder)}`);
     setPlacing(true);
@@ -70,6 +73,7 @@ export default function CartPage() {
             name: form.name,
             phone: form.phone,
             address: form.address,
+            tableNumber: mode === "dine-in" ? form.tableNumber : "",
           },
           mode,
           scheduledAt: form.scheduledAt,
@@ -213,9 +217,9 @@ export default function CartPage() {
               ))}
 
               <Card className="p-5 mt-6">
-                <h2 className="font-bold mb-4">Delivery details</h2>
+                <h2 className="font-bold mb-4">Order details</h2>
                 <div className="flex gap-2 mb-4">
-                  {["serve", "pickup", "delivery"].map((m) => (
+                  {["dine-in", "pickup", "delivery"].map((m) => (
                     <button
                       key={m}
                       onClick={() => setMode(m)}
@@ -236,8 +240,8 @@ export default function CartPage() {
                             (Contact store)
                           </span>
                         </span>
-                      ) : m === "serve" ? (
-                        "🍽️ Serve"
+                      ) : m === "dine-in" ? (
+                        "🍽️ Dine-in"
                       ) : (
                         "🏪 Pickup"
                       )}
@@ -266,6 +270,19 @@ export default function CartPage() {
                       type="tel"
                     />
                   </div>
+                  {mode === "dine-in" && (
+                    <div>
+                      <Label>Table Number*</Label>
+                      <Input
+                        value={form.tableNumber}
+                        onChange={(e) =>
+                          setForm({ ...form, tableNumber: e.target.value })
+                        }
+                        placeholder="e.g. 5"
+                        maxLength={10}
+                      />
+                    </div>
+                  )}
                   {mode === "delivery" && (
                     <div className="sm:col-span-2">
                       <Label>Address*</Label>
@@ -323,7 +340,13 @@ export default function CartPage() {
                     <span>{inr(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>{mode === "delivery" ? "Delivery" : "Pickup"}</span>
+                    <span>
+                      {mode === "delivery"
+                        ? "Delivery"
+                        : mode === "dine-in"
+                          ? "Dine-in"
+                          : "Pickup"}
+                    </span>
                     <span>{inr(deliveryFee)}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between font-bold text-base">

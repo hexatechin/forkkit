@@ -467,6 +467,9 @@ async function route(request, method, segments) {
     if (!tenantSlug || !customer?.name || !customer?.phone || !items?.length)
       return err("missing required fields");
 
+    if (mode === "dine-in" && !customer?.tableNumber)
+      return err("table number is required");
+
     const { rows: tenantRows } = await db.query(
       `SELECT id, name,
               deliveryFee AS "deliveryFee",
@@ -523,9 +526,17 @@ async function route(request, method, segments) {
       lines.push(`📍 ${customer.address || "-"}`);
     }
 
+    if (mode === "dine-in") {
+      lines.push(`🪑 *Table Number:* ${customer.tableNumber || "-"}`);
+    }
+
     lines.push(
-      `${mode === "delivery" ? "🚚" : "🏪"} *Mode:* ${
-        mode === "delivery" ? "Delivery" : "Pickup"
+      `${mode === "delivery" ? "🚚" : mode === "dine-in" ? "🍽️" : "🏪"} *Mode:* ${
+        mode === "delivery"
+          ? "Delivery"
+          : mode === "dine-in"
+            ? "Dine-in"
+            : "Pickup"
       }`,
     );
 
