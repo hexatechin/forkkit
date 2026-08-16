@@ -9,6 +9,7 @@ import {
   extractToken,
 } from "@/lib/auth";
 import { TEMPLATES, buildStarter } from "@/lib/templates";
+import { uploadImage, deleteImage, deleteFolder } from "@/lib/cloudinary";
 import { v4 as uuid } from "uuid";
 
 const json = (data, status = 200) => NextResponse.json(data, { status });
@@ -1038,6 +1039,277 @@ async function route(request, method, segments) {
       );
     }
     return json({ ok: true });
+  }
+
+  // ADMIN UPLOAD-IMAGE
+  if (path === "/admin/upload-image" && method === "POST") {
+    const { user, error } = await requireAuth(request, [
+      "owner",
+      "manager",
+      "super_admin",
+    ]);
+
+    if (error) return error;
+
+    try {
+      const formData = await request.formData();
+
+      const file = formData.get("file");
+      const storefrontId = formData.get("storefrontId");
+      const type = formData.get("type");
+      const folder = formData.get("folder");
+
+      if (!(file instanceof File)) {
+        return err("No image file provided");
+      }
+
+      if (!storefrontId) {
+        return err("Storefront ID is required");
+      }
+
+      if (!type) {
+        return err("Image type is required");
+      }
+
+      if (!file.type.startsWith("image/")) {
+        return err("Only image files are allowed");
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        return err("Image must be smaller than 5MB");
+      }
+
+      // Optional but recommended:
+      // Make sure the authenticated user can only upload
+      // images for their own storefront.
+      if (String(storefrontId) !== String(user.tenantId)) {
+        return err("Unauthorized storefront");
+      }
+
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      const result = await uploadImage({
+        buffer,
+        storefrontId,
+        folder: folder || "general",
+        type,
+      });
+
+      return json({
+        success: true,
+        ...result,
+      });
+    } catch (error) {
+      console.error("Image upload error:", error);
+
+      return err(error?.message || "Image upload failed", 500);
+    }
+  }
+
+  // ADMIN UPLOAD-IMAGES
+  if (path === "/admin/upload-images" && method === "POST") {
+    const { user, error } = await requireAuth(request, [
+      "owner",
+      "manager",
+      "super_admin",
+    ]);
+
+    if (error) return error;
+
+    try {
+      const formData = await request.formData();
+
+      const files = formData.getAll("files");
+      const storefrontId = formData.get("storefrontId");
+      const type = formData.get("type");
+      const folder = formData.get("folder");
+
+      // Maximum 5 images per upload
+      if (files.length > 5) {
+        return err("Maximum 5 images can be uploaded at once");
+      }
+
+      if (!storefrontId) {
+        return err("Storefront ID is required");
+      }
+
+      if (!type) {
+        return err("Image type is required");
+      }
+
+      // User can only upload to their own storefront
+      if (String(storefrontId) !== String(user.tenantId)) {
+        return err("Unauthorized storefront");
+      }
+
+      if (!files.length) {
+        return err("No image files provided");
+      }
+
+      const uploadedImages = [];
+
+      for (const file of files) {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        const result = await uploadImage({
+          buffer,
+          storefrontId,
+          folder: folder || "general",
+          type,
+        });
+
+        uploadedImages.push(result);
+      }
+
+      return json({
+        success: true,
+        count: uploadedImages.length,
+        images: uploadedImages,
+      });
+    } catch (error) {
+      console.error("Bulk image upload error:", error);
+
+      return err(error?.message || "Image upload failed", 500);
+    }
+  }
+
+  // ADMIN DELETE-IMAGE
+  if (path === "/admin/delete-image" && method === "DELETE") {
+    const { user, error } = await requireAuth(request, [
+      "owner",
+      "manager",
+      "super_admin",
+    ]);
+
+    console.log("Calling started ...");
+
+    if (error) return error;
+
+    try {
+      const body = await request.json();
+
+      const storefrontId = body.storefrontId;
+
+      const images = Array.isArray(body.images)
+        ? body.images
+        : body.image
+          ? [body.image]
+          : [];
+
+      if (!storefrontId) {
+        return err("Storefront ID is required");
+      }
+
+      if (images.length === 0) {
+        return err("Cloudinary image URL is required");
+      }
+
+      if (String(storefrontId) !== String(user.tenantId)) {
+        return err("Unauthorized storefront");
+      }
+
+      const results = [];
+
+      for (const imageUrl of images) {
+        if (!imageUrl || typeof imageUrl !== "string") {
+          results.push({
+            imageUrl,
+            success: false,
+            error: "Invalid Cloudinary image URL",
+          });
+          continue;
+        }
+
+        try {
+          const result = await deleteImage(imageUrl);
+
+          results.push({
+            imageUrl,
+            success: true,
+            result,
+          });
+        } catch (error) {
+          console.error(`Cloudinary delete error for ${imageUrl}:`, error);
+
+          results.push({
+            imageUrl,
+            success: false,
+            error: error?.message || "Image deletion failed",
+          });
+        }
+      }
+
+      const failed = results.filter((item) => !item.success);
+
+      return json({
+        success: failed.length === 0,
+        count: results.length,
+        deleted: results.filter((item) => item.success).length,
+        failed: failed.length,
+        results,
+      });
+    } catch (error) {
+      console.error("Image delete error:", error);
+
+      return err(error?.message || "Image deletion failed", 500);
+    }
+  }
+
+  // ADMIN DELETE-FOLDER
+  if (path === "/admin/delete-folder" && method === "DELETE") {
+    const { user, error } = await requireAuth(request, [
+      "owner",
+      "manager",
+      "super_admin",
+    ]);
+
+    if (error) return error;
+
+    try {
+      const body = await request.json();
+
+      const storefrontId = body.storefrontId;
+      const folder = body.folder;
+
+      if (!storefrontId) {
+        return err("Storefront ID is required");
+      }
+
+      if (!folder) {
+        return err("Cloudinary folder is required");
+      }
+
+      // User can only delete files from their own storefront.
+      if (String(storefrontId) !== String(user.tenantId)) {
+        return err("Unauthorized storefront");
+      }
+
+      /*
+       * IMPORTANT:
+       *
+       * Do not allow an arbitrary Cloudinary folder to be deleted.
+       * The folder must belong to the storefront.
+       */
+      const prefix = `indocia/${process.env.NODE_ENV}/${storefrontId}/${folder}`
+        .replace(/\/+/g, "/")
+        .replace(/\/$/, "");
+
+      console.log("Deleting Cloudinary resources by prefix:", prefix);
+
+      const result = await deleteFolder(prefix + "/");
+
+      return json({
+        success: true,
+        message: "Cloudinary folder deleted",
+        result,
+      });
+    } catch (error) {
+      console.error("Cloudinary folder deletion error:", error);
+
+      return err(error?.message || "Failed to delete Cloudinary folder", 500);
+    }
   }
 
   return err(`Not found: ${method} ${path}`, 404);
