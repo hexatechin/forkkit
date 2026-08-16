@@ -252,6 +252,7 @@ export default function CartPage() {
                       onChange={(e) =>
                         setForm({ ...form, name: e.target.value })
                       }
+                      maxLength={20}
                     />
                   </div>
                   <div>
@@ -261,6 +262,8 @@ export default function CartPage() {
                       onChange={(e) =>
                         setForm({ ...form, phone: e.target.value })
                       }
+                      maxLength={10}
+                      type="tel"
                     />
                   </div>
                   {mode === "delivery" && (
@@ -293,6 +296,7 @@ export default function CartPage() {
                       onChange={(e) =>
                         setForm({ ...form, occasion: e.target.value })
                       }
+                      maxLength={20}
                     />
                   </div>
                   <div className="sm:col-span-2">
@@ -303,6 +307,7 @@ export default function CartPage() {
                       onChange={(e) =>
                         setForm({ ...form, notes: e.target.value })
                       }
+                      maxLength={100}
                     />
                   </div>
                 </div>

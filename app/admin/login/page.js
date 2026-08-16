@@ -151,6 +151,7 @@ export default function AdminLogin() {
               <Input
                 type="email"
                 value={email}
+                maxLength={50}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
@@ -160,6 +161,7 @@ export default function AdminLogin() {
               <Input
                 type="password"
                 value={password}
+                maxLength={20}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />

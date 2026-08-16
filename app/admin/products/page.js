@@ -987,6 +987,7 @@ function ProductsInner() {
 
         <Input
           value={q}
+          maxLength={50}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search products..."
           className="pl-9"
@@ -1208,6 +1209,7 @@ function ProductsInner() {
               <Input
                 placeholder="e.g. Chocolate Truffle Cake"
                 value={f.name}
+                maxLength={30}
                 onChange={(e) =>
                   setF({
                     ...f,
@@ -1245,6 +1247,7 @@ function ProductsInner() {
                   type="number"
                   placeholder="499"
                   value={f.price}
+                  maxLength={5}
                   onChange={(e) =>
                     setF({
                       ...f,
@@ -1261,6 +1264,7 @@ function ProductsInner() {
                   type="number"
                   placeholder="optional"
                   value={f.discountPrice}
+                  maxLength={5}
                   onChange={(e) =>
                     setF({
                       ...f,
@@ -1432,6 +1436,7 @@ function ProductsInner() {
               <Input
                 placeholder="Bestseller, New (comma-separated)"
                 value={f.badges}
+                maxLength={15}
                 onChange={(e) =>
                   setF({
                     ...f,
@@ -1536,6 +1541,8 @@ function ProductsInner() {
                             <Input
                               type="number"
                               value={o.priceDelta}
+                              min="0"
+                              maxLength={5}
                               onChange={(e) =>
                                 updateVariantOption(vi, oi, {
                                   priceDelta: e.target.value,
@@ -1581,6 +1588,7 @@ function ProductsInner() {
                       <Input
                         type="number"
                         value={a.price}
+                        maxLength={5}
                         onChange={(e) =>
                           updateAddon(i, {
                             price: e.target.value,
