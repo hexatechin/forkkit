@@ -56,7 +56,7 @@ export default function StorefrontPage() {
   const { slug } = useParams();
   const [data, setData] = useState(null);
   const [q, setQ] = useState("");
-  const [activeCat, setActiveCat] = useState(null);
+  const [activeCat, setActiveCat] = useState("all");
   const [dietFilter, setDietFilter] = useState("all");
   const catRefs = useRef({});
   const { items, setTenant, addItem, removeItem, updateQty } = useCart();
@@ -68,7 +68,6 @@ export default function StorefrontPage() {
       .then((d) => {
         setData(d);
         setTenant(slug);
-        if (d.categories?.[0]) setActiveCat(d.categories[0].id);
       });
   }, [slug]);
 
