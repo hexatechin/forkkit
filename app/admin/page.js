@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getTenantUrl } from "@/lib/navigation";
 import {
   Package,
   ClipboardList,
@@ -89,9 +90,7 @@ export default function AdminDashboard() {
     </Card>
   );
 
-  const storefrontUrl = tenant
-    ? `${typeof window !== "undefined" ? (window.location.hostname.includes("indocia") ? `${tenant.slug}.${window.location.hostname}` : window.location.origin) : ""}/t/${tenant.slug}`
-    : "";
+  const storefrontUrl = tenant ? getTenantUrl(tenant.slug, "/") : "";
   const qrUrl = storefrontUrl
     ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(storefrontUrl)}`
     : "";
@@ -214,7 +213,7 @@ export default function AdminDashboard() {
                 </Button>
               </div>
               <Link
-                href={`${tenant.slug}.${window.location.host}`}
+                href={getTenantUrl(tenant.slug, "/")}
                 target="_blank"
                 className="block"
               >
