@@ -489,37 +489,89 @@ async function route(request, method, segments) {
     );
 
     const lines = [];
-    lines.push(`*New Order — ${tenant.name}*`);
-    lines.push(`Order ID: ${orderId.slice(0, 8).toUpperCase()}`);
+
+    lines.push(`🎉 *NEW ORDER FROM ${customer.name.toUpperCase()}*`);
+    lines.push(`━━━━━━━━━━━━━━━━━━━━`);
+    lines.push(`👋 *Hi ${tenant.name}!*`);
+    lines.push(`🧾 *Order:* #${orderId.slice(0, 8).toUpperCase()}`);
     lines.push("");
-    lines.push(`*Customer:* ${customer.name}`);
-    lines.push(`*Phone:* ${customer.phone}`);
-    if (mode === "delivery")
-      lines.push(`*Address:* ${customer.address || "-"}`);
-    lines.push(`*Mode:* ${mode === "delivery" ? "🚚 Delivery" : "🏪 Pickup"}`);
-    if (scheduledAt) lines.push(`*Scheduled:* ${scheduledAt}`);
-    if (occasion) lines.push(`*Occasion:* ${occasion}`);
-    if (cakeMessage) lines.push(`*Cake message:* ${cakeMessage}`);
-    lines.push("");
-    lines.push("*Items:*");
-    items.forEach((i) => {
-      const opts = [];
-      if (i.variantLabel) opts.push(i.variantLabel);
-      if (i.addons?.length) opts.push(i.addons.map((a) => a.name).join(", "));
-      const line = `  • ${i.qty} × ${i.name}${opts.length ? " (" + opts.join(" | ") + ")" : ""} — ₹${(i.unitPrice * i.qty).toLocaleString("en-IN")}`;
-      lines.push(line);
-    });
-    lines.push("");
-    lines.push(`*Subtotal:* ₹${subtotal.toLocaleString("en-IN")}`);
-    if (deliveryFee)
-      lines.push(`*Delivery:* ₹${deliveryFee.toLocaleString("en-IN")}`);
-    lines.push(`*Total:* *₹${total.toLocaleString("en-IN")}*`);
-    if (notes) {
-      lines.push("");
-      lines.push(`*Notes:* ${notes}`);
+
+    lines.push(`👤 *Customer Details*`);
+    lines.push(`👤 ${customer.name}`);
+    lines.push(`📞 ${customer.phone}`);
+
+    if (mode === "delivery") {
+      lines.push(`📍 ${customer.address || "-"}`);
     }
 
+    lines.push(
+      `${mode === "delivery" ? "🚚" : "🏪"} *Mode:* ${
+        mode === "delivery" ? "Delivery" : "Pickup"
+      }`,
+    );
+
+    if (scheduledAt) {
+      lines.push(`🕐 *Scheduled:* ${scheduledAt}`);
+    }
+
+    if (occasion) {
+      lines.push(`🎉 *Occasion:* ${occasion}`);
+    }
+
+    if (cakeMessage) {
+      lines.push(`🎂 *Cake Message:* ${cakeMessage}`);
+    }
+
+    lines.push("");
+    lines.push(`🍽️ *ORDER ITEMS*`);
+    lines.push(`━━━━━━━━━━━━━━━━━━━━`);
+
+    items.forEach((i) => {
+      const opts = [];
+
+      if (i.variantLabel) {
+        opts.push(`📏 ${i.variantLabel}`);
+      }
+
+      if (i.addons?.length) {
+        opts.push(`➕ ${i.addons.map((a) => a.name).join(", ")}`);
+      }
+
+      lines.push(`🔹 *${i.qty} × ${i.name}*`);
+
+      if (opts.length) {
+        opts.forEach((option) => {
+          lines.push(`   ${option}`);
+        });
+      }
+
+      lines.push(`   💰 ₹${(i.unitPrice * i.qty).toLocaleString("en-IN")}`);
+    });
+
+    lines.push("");
+    lines.push(`💳 *ORDER SUMMARY*`);
+    lines.push(`━━━━━━━━━━━━━━━━━━━━`);
+
+    lines.push(`🧾 Subtotal: ₹${subtotal.toLocaleString("en-IN")}`);
+
+    if (deliveryFee) {
+      lines.push(`🚚 Delivery: ₹${deliveryFee.toLocaleString("en-IN")}`);
+    }
+
+    lines.push(`💰 *TOTAL: ₹${total.toLocaleString("en-IN")}*`);
+
+    if (notes) {
+      lines.push("");
+      lines.push(`📝 *Customer Notes*`);
+      lines.push(notes);
+    }
+
+    lines.push("");
+    lines.push(`━━━━━━━━━━━━━━━━━━━━`);
+    lines.push(`✨ *Looking forward to it! Thank you!*`);
+
     const message = lines.join("\n");
+
     const whatsappUrl = `https://wa.me/${tenant.whatsappNumber}?text=${encodeURIComponent(message)}`;
 
     return json({ orderId, whatsappUrl, message, total });

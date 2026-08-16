@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import DownloadMenuQR from "@/components/DownloadMenuQR";
 import { getTenantUrl } from "@/lib/navigation";
 import {
   Package,
@@ -46,7 +47,7 @@ export default function AdminDashboard() {
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    if (params.get("welcome")) setShowWelcome(true);
+    if (params && params.get("welcome")) setShowWelcome(true);
     const t = localStorage.getItem("indocia-token");
     Promise.all([
       fetch("/api/admin/products", {
@@ -91,16 +92,23 @@ export default function AdminDashboard() {
   );
 
   const storefrontUrl = tenant ? getTenantUrl(tenant.slug, "/") : "";
-  const qrUrl = storefrontUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(storefrontUrl)}`
-    : "";
   const copyLink = () => {
     navigator.clipboard.writeText(storefrontUrl);
     toast.success("Link copied");
   };
   const shareWA = () =>
     window.open(
-      `https://wa.me/?text=${encodeURIComponent(`Order from ${tenant.name}: ${storefrontUrl}`)}`,
+      `https://wa.me/?text=${encodeURIComponent(
+        `😋 Craving something delicious?
+
+🍰 ${tenant.name} has got you covered!
+Fresh, delicious & made to satisfy your cravings. ❤️
+
+👉 Order now:
+${storefrontUrl}
+
+✨ Treat yourself today — you deserve it! 😍`,
+      )}`,
       "_blank",
     );
 
@@ -223,7 +231,7 @@ export default function AdminDashboard() {
                 </Button>
               </Link>
               <div className="flex justify-center pt-2">
-                <img src={qrUrl} alt="QR" className="rounded-lg border" />
+                <DownloadMenuQR storefrontUrl={storefrontUrl} tenant={tenant} />
               </div>
               <p className="text-xs text-muted-foreground text-center">
                 Print this QR for your shop counter
