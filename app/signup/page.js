@@ -249,11 +249,10 @@ export default function SignupPage() {
                   <div>
                     Your storefront will be at{" "}
                     <b>
-                      /t/
                       {(f.businessName || "your-shop")
                         .toLowerCase()
-                        .replace(/[^a-z0-9]+/g, "-")
-                        .replace(/^-|-$/g, "") || "your-shop"}
+                        .replace(/[^a-z0-9]/g, "") || "yourshop"}
+                      .indocia.in
                     </b>
                   </div>
                 </div>

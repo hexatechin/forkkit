@@ -1390,6 +1390,14 @@ async function route(request, method, segments) {
     }
   }
 
+  // HEALTH CHECK UPTIME
+  if (path === "/health" && method === "GET") {
+    return Response.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   return err(`Not found: ${method} ${path}`, 404);
 }
 

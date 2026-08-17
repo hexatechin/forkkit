@@ -165,31 +165,13 @@ export default function StorefrontPage() {
                 {t.name}
               </h1>
               <p className="text-sm md:text-base opacity-90 text-white">
-                {t.tagline?.length > 175
-                  ? `${t.tagline.slice(0, 175)}...`
+                {t.tagline?.length > 50
+                  ? `${t.tagline.slice(0, 50)}...`
                   : t.tagline}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 bg-white/90 rounded-full p-1 shadow-sm">
-              {["all", "veg", "nonveg"].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setDietFilter(filter)}
-                  className={`whitespace-nowrap px-3 py-2 rounded-full text-sm font-medium transition ${dietFilter === filter ? "text-white" : "bg-transparent text-neutral-800 hover:bg-neutral-100"}`}
-                  style={
-                    dietFilter === filter ? { background: t.primaryColor } : {}
-                  }
-                >
-                  {filter === "all"
-                    ? "All"
-                    : filter === "veg"
-                      ? "Veg"
-                      : "Non-veg"}
-                </button>
-              ))}
-            </div>
             <Link href={getTenantUrl(slug, "/cart")}>
               <div className="relative bg-white rounded-full h-10 w-10 flex items-center justify-center shadow-lg">
                 <ShoppingBag
@@ -214,17 +196,130 @@ export default function StorefrontPage() {
               <Clock className="h-3 w-3" /> {t.businessHours?.open}-
               {t.businessHours?.close}
             </span>
-            {t.address && (
-              <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1">
-                <MapPin className="h-3 w-3" /> {t.address}
-              </span>
-            )}
             {t.phone && (
               <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1">
                 <Phone className="h-3 w-3" />
                 <Link href={`tel:+91-${t.phone}`}>+91-{t.phone}</Link>
               </span>
             )}
+            {t.address && (
+              <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1 w-2/3 sm:w-auto">
+                <MapPin className="w-3" /> {t.address}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="absolute bottom-8 left-6 right-6 flex justify-end text-white">
+          <div className="mt-3 flex flex-wrap justify-end gap-3 text-xs">
+            {/* Mobile diet toggle */}
+            <div className="">
+              <div
+                className="
+      relative flex items-center
+      h-8 w-[118px]
+      rounded-full
+      bg-neutral-100
+      p-1
+      shadow-inner
+      border border-neutral-200
+      overflow-hidden
+    "
+              >
+                {/* Sliding active background */}
+                <div
+                  className={`
+        absolute top-1 bottom-1
+        w-[36px]
+        rounded-full
+        bg-white
+        shadow-[0_2px_8px_rgba(0,0,0,0.15)]
+        transition-all duration-300 ease-[cubic-bezier(.4,0,.2,1)]
+        ${
+          dietFilter === "all"
+            ? "left-1"
+            : dietFilter === "veg"
+              ? "left-[41px]"
+              : "left-[80px]"
+        }
+      `}
+                />
+
+                {/* All */}
+                <button
+                  type="button"
+                  onClick={() => setDietFilter("all")}
+                  className="
+        relative z-10
+        flex-1 h-full
+        flex items-center justify-center
+        text-[11px] font-semibold
+        active:scale-90
+        transition-transform duration-100
+      "
+                  style={{
+                    color: dietFilter === "all" ? t.primaryColor : "#737373",
+                  }}
+                >
+                  All
+                </button>
+
+                {/* Veg */}
+                <button
+                  type="button"
+                  onClick={() => setDietFilter("veg")}
+                  className="
+        relative z-10
+        flex-1 h-full
+        flex items-center justify-center
+        active:scale-90
+        transition-transform duration-100
+      "
+                  aria-label="Vegetarian"
+                >
+                  <span
+                    className={`
+          w-[9px] h-[9px]
+          rounded-full
+          border-[2px]
+          transition-all duration-200
+          ${
+            dietFilter === "veg"
+              ? "bg-green-500 border-green-600 scale-110"
+              : "bg-transparent border-green-500"
+          }
+        `}
+                  />
+                </button>
+
+                {/* Non-veg */}
+                <button
+                  type="button"
+                  onClick={() => setDietFilter("nonveg")}
+                  className="
+        relative z-10
+        flex-1 h-full
+        flex items-center justify-center
+        active:scale-90
+        transition-transform duration-100
+      "
+                  aria-label="Non-vegetarian"
+                >
+                  <span
+                    className={`
+          w-[9px] h-[9px]
+          rounded-full
+          border-[2px]
+          transition-all duration-200
+          ${
+            dietFilter === "nonveg"
+              ? "bg-red-500 border-red-600 scale-110"
+              : "bg-transparent border-red-500"
+          }
+        `}
+                  />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -583,7 +678,7 @@ export default function StorefrontPage() {
               {t.phone && (
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  {t.phone}
+                  <Link href={`tel:+91-${t.phone}`}>+91-{t.phone}</Link>
                 </div>
               )}
               {t.email && (
@@ -603,6 +698,7 @@ export default function StorefrontPage() {
               {t.socialLinks?.instagram && (
                 <a
                   href={t.socialLinks.instagram}
+                  target="_blank"
                   className="flex items-center gap-2 hover:underline"
                 >
                   <Instagram className="h-4 w-4" />
@@ -612,6 +708,7 @@ export default function StorefrontPage() {
               {t.socialLinks?.facebook && (
                 <a
                   href={t.socialLinks.facebook}
+                  target="_blank"
                   className="flex items-center gap-2 hover:underline"
                 >
                   <Facebook className="h-4 w-4" />
@@ -631,6 +728,7 @@ export default function StorefrontPage() {
             Powered by{" "}
             <a
               href="https://indocia.in"
+              target="_blank"
               className="font-semibold text-white hover:opacity-80 transition-opacity"
             >
               Indocia

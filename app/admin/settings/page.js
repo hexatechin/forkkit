@@ -374,6 +374,8 @@ export default function AdminSettings() {
             <Input
               value={t.businessHours?.open || ""}
               maxLength={10}
+              type="time"
+              step="60"
               onChange={(e) => {
                 if (e.target.value.length > 10) return;
                 set("businessHours", {
@@ -389,6 +391,8 @@ export default function AdminSettings() {
             <Label>Hours close</Label>
             <Input
               value={t.businessHours?.close || ""}
+              type="time"
+              step="60"
               maxLength={10}
               onChange={(e) =>
                 set("businessHours", {
