@@ -1540,7 +1540,11 @@ function ProductsInner() {
 
                             <Input
                               type="number"
-                              value={o.priceDelta}
+                              value={
+                                oi === 0
+                                  ? f.discountPrice || f.price
+                                  : o.priceDelta
+                              }
                               min="0"
                               maxLength={5}
                               onChange={(e) =>

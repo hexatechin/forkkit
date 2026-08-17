@@ -50,7 +50,7 @@ export default function CartPage() {
   const subtotal = items.reduce((s, i) => s + i.unitPrice * i.qty, 0);
   const deliveryFee = mode === "delivery" ? tenant.deliveryFee || 0 : 0;
   const total = subtotal + deliveryFee;
-  const belowMin = total < (tenant.minOrder || 0);
+  const belowMin = subtotal < (tenant.minOrder || 0) && mode === "delivery";
 
   const placeOrder = async () => {
     if (!items.length) return toast.error("Cart is empty");
