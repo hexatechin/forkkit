@@ -391,9 +391,6 @@ export default function StorefrontPage() {
                 <AnimatePresence>
                   {prods.map((p, i) => {
                     const discountPercent = getDiscountPercent(p);
-                    const isBestseller = p.badges?.some((b) =>
-                      /bestseller|popular/i.test(b),
-                    );
                     const displayDiet = detectDiet(p);
                     return (
                       <motion.div
@@ -409,47 +406,51 @@ export default function StorefrontPage() {
                               : "hover:-translate-y-[4px] hover:shadow-xl"
                           }`}
                         >
-                          <div className="grid h-full min-h-[210px] gap-3 p-[10px] grid-cols-[160px_minmax(0,1fr)] items-center">
+                          <div className="grid h-full gap-3 p-[10px] grid-cols-[125px_minmax(0,1fr)] items-center">
                             <div
-                              className={`group relative block h-[160px] w-[160px] overflow-hidden rounded-xl bg-slate-100 ${
+                              className={`group relative block h-[120px] w-[120px] overflow-hidden rounded-xl bg-slate-100 ${
                                 p.available
                                   ? "transition duration-300 hover:scale-[1.03]"
                                   : "cursor-not-allowed"
                               }`}
                             >
-                              <div className="relative h-full w-full">
-                                {p.images?.[0] ? (
-                                  <img
-                                    loading="lazy"
-                                    src={p.images[0]}
-                                    alt={p.name}
-                                    className={`h-full w-full object-cover ${
-                                      !p.available ? "grayscale" : ""
+                              <Link
+                                href={getTenantUrl(slug, `/product/${p.id}`)}
+                              >
+                                <div className="relative h-full w-full">
+                                  {p.images?.[0] ? (
+                                    <img
+                                      loading="lazy"
+                                      src={p.images[0]}
+                                      alt={p.name}
+                                      className={`h-full w-full object-cover ${
+                                        !p.available ? "grayscale" : ""
+                                      }`}
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none";
+
+                                        const fallback =
+                                          e.currentTarget.parentElement?.querySelector(
+                                            ".image-fallback",
+                                          );
+
+                                        if (fallback) {
+                                          fallback.classList.remove("hidden");
+                                          fallback.classList.add("flex");
+                                        }
+                                      }}
+                                    />
+                                  ) : null}
+
+                                  <div
+                                    className={`image-fallback absolute inset-0 items-center justify-center bg-slate-100 text-slate-400 text-4xl ${
+                                      p.images?.[0] ? "hidden" : "flex"
                                     }`}
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none";
-
-                                      const fallback =
-                                        e.currentTarget.parentElement?.querySelector(
-                                          ".image-fallback",
-                                        );
-
-                                      if (fallback) {
-                                        fallback.classList.remove("hidden");
-                                        fallback.classList.add("flex");
-                                      }
-                                    }}
-                                  />
-                                ) : null}
-
-                                <div
-                                  className={`image-fallback absolute inset-0 items-center justify-center bg-slate-100 text-slate-400 text-4xl ${
-                                    p.images?.[0] ? "hidden" : "flex"
-                                  }`}
-                                >
-                                  🍽️
+                                  >
+                                    🍽️
+                                  </div>
                                 </div>
-                              </div>
+                              </Link>
 
                               {/* Unavailable Overlay */}
                               {!p.available && (
@@ -460,7 +461,7 @@ export default function StorefrontPage() {
                                 </div>
                               )}
 
-                              <div className="absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
+                              <div className="absolute top-1 left-1 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
                                 <span
                                   className={`h-2.5 w-2.5 rounded-full ${
                                     displayDiet === "nonveg"
@@ -471,15 +472,15 @@ export default function StorefrontPage() {
                                 {displayDiet === "nonveg" ? "Non-Veg" : "Veg"}
                               </div>
 
-                              {isBestseller && p.available && (
-                                <span className="absolute bottom-4 left-4 rounded-full bg-amber-500 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
-                                  BESTSELLER
+                              {p.badges && p.available && (
+                                <span className="absolute bottom-1 left-1 rounded-full bg-amber-500 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
+                                  {p.badges}
                                 </span>
                               )}
                             </div>
 
                             <div className="flex h-full flex-col justify-center gap-3">
-                              <div className="space-y-3">
+                              <div>
                                 <div className="flex items-start justify-between gap-3">
                                   {p.available ? (
                                     <Link

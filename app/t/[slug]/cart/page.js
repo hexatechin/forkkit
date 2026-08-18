@@ -87,6 +87,7 @@ export default function CartPage() {
             unitPrice: i.unitPrice,
             variantLabel: i.variantLabel,
             addons: i.addons,
+            cakeMessage: i.cakeMessage,
           })),
         }),
       });
@@ -300,9 +301,11 @@ export default function CartPage() {
                     <Input
                       type="datetime-local"
                       value={form.scheduledAt}
-                      onChange={(e) =>
-                        setForm({ ...form, scheduledAt: e.target.value })
-                      }
+                      min={new Date().toISOString().slice(0, 16)}
+                      onChange={(e) => {
+                        if (new Date() > new Date(e.target.value)) return;
+                        setForm({ ...form, scheduledAt: e.target.value });
+                      }}
                     />
                   </div>
                   <div>

@@ -574,6 +574,10 @@ async function route(request, method, segments) {
         });
       }
 
+      if (i.cakeMessage) {
+        lines.push(`   💬 ${i.cakeMessage}`);
+      }
+
       lines.push(`   💰 ₹${(i.unitPrice * i.qty).toLocaleString("en-IN")}`);
     });
 
