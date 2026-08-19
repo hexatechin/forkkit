@@ -513,14 +513,10 @@ async function route(request, method, segments) {
 
     const lines = [];
 
-    lines.push(`🎉 *New Order from ${customer.name.toUpperCase()}*`);
+    lines.push(`🎉 *New Order #${orderId.slice(0, 8).toUpperCase()}*`);
     lines.push(``);
     lines.push(`👋 *Hi ${tenant.name}!*`);
-    lines.push(`🧾 *Order:* #${orderId.slice(0, 8).toUpperCase()}`);
     lines.push("");
-
-    lines.push(`👤 *Customer:* ${customer.name}`);
-    lines.push(`📞 ${customer.phone}`);
 
     if (mode === "delivery") {
       lines.push(`📍 ${customer.address || "-"}`);
@@ -546,10 +542,6 @@ async function route(request, method, segments) {
 
     if (occasion) {
       lines.push(`🎉 *Occasion:* ${occasion}`);
-    }
-
-    if (cakeMessage) {
-      lines.push(`🎂 *Cake Message:* ${cakeMessage}`);
     }
 
     lines.push("");

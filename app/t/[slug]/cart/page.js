@@ -26,7 +26,7 @@ export default function CartPage() {
   const { slug } = useParams();
   const [tenant, setTenantData] = useState(null);
   const { items, updateQty, removeItem, clear } = useCart();
-  const [mode, setMode] = useState("dine-in");
+  const [mode, setMode] = useState("pickup");
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -54,8 +54,7 @@ export default function CartPage() {
 
   const placeOrder = async () => {
     if (!items.length) return toast.error("Cart is empty");
-    if (!form.name || !form.phone)
-      return toast.error("Name and phone are required");
+    if (!form.phone) return toast.error("Phone number is required");
     if (mode === "delivery" && !form.address)
       return toast.error("Delivery address is required");
     if (mode === "dine-in" && !form.tableNumber)
@@ -220,7 +219,7 @@ export default function CartPage() {
               <Card className="p-5 mt-6">
                 <h2 className="font-bold mb-4">Order details</h2>
                 <div className="flex gap-2 mb-4">
-                  {["dine-in", "pickup", "delivery"].map((m) => (
+                  {["pickup", "delivery", "dine-in"].map((m) => (
                     <button
                       key={m}
                       onClick={() => setMode(m)}
@@ -250,7 +249,7 @@ export default function CartPage() {
                   ))}
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <div>
+                  {/* <div>
                     <Label>Name*</Label>
                     <Input
                       value={form.name}
@@ -259,7 +258,7 @@ export default function CartPage() {
                       }
                       maxLength={20}
                     />
-                  </div>
+                  </div> */}
                   <div>
                     <Label>Phone*</Label>
                     <Input
@@ -271,9 +270,21 @@ export default function CartPage() {
                       type="tel"
                     />
                   </div>
+                  <div>
+                    <Label>Scheduled date/time (optional)</Label>
+                    <Input
+                      type="datetime-local"
+                      value={form.scheduledAt}
+                      min={new Date().toISOString().slice(0, 16)}
+                      onChange={(e) => {
+                        if (new Date() > new Date(e.target.value)) return;
+                        setForm({ ...form, scheduledAt: e.target.value });
+                      }}
+                    />
+                  </div>
                   {mode === "dine-in" && (
                     <div>
-                      <Label>Table Number*</Label>
+                      <Label>Table Number</Label>
                       <Input
                         value={form.tableNumber}
                         onChange={(e) =>
@@ -296,19 +307,8 @@ export default function CartPage() {
                       />
                     </div>
                   )}
-                  <div>
-                    <Label>Scheduled date/time (optional)</Label>
-                    <Input
-                      type="datetime-local"
-                      value={form.scheduledAt}
-                      min={new Date().toISOString().slice(0, 16)}
-                      onChange={(e) => {
-                        if (new Date() > new Date(e.target.value)) return;
-                        setForm({ ...form, scheduledAt: e.target.value });
-                      }}
-                    />
-                  </div>
-                  <div>
+
+                  {/* <div>
                     <Label>Occasion (optional)</Label>
                     <Input
                       placeholder="Birthday, anniversary..."
@@ -318,7 +318,7 @@ export default function CartPage() {
                       }
                       maxLength={20}
                     />
-                  </div>
+                  </div> */}
                   <div className="sm:col-span-2">
                     <Label>Special instructions</Label>
                     <Textarea
