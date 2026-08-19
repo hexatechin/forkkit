@@ -464,7 +464,7 @@ async function route(request, method, segments) {
       notes,
       items,
     } = body;
-    if (!tenantSlug || !customer?.name || !customer?.phone || !items?.length)
+    if (!tenantSlug || !customer?.phone || !items?.length)
       return err("missing required fields");
 
     if (mode === "dine-in" && !customer?.tableNumber)
@@ -485,7 +485,7 @@ async function route(request, method, segments) {
     const deliveryFee = mode === "delivery" ? tenant.deliveryFee || 0 : 0;
     const total = subtotal + deliveryFee;
 
-    if (total < (tenant.minOrder || 0))
+    if (mode === "delivery" && subtotal < (tenant.minOrder || 0))
       return err(`Minimum order is ₹${tenant.minOrder}`);
 
     const orderId = uuid();
