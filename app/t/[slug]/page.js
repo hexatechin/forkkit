@@ -171,7 +171,7 @@ export default function StorefrontPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
             <Link href={getTenantUrl(slug, "/cart")}>
               <div className="relative bg-white rounded-full h-10 w-10 flex items-center justify-center shadow-lg">
                 <ShoppingBag
@@ -190,58 +190,63 @@ export default function StorefrontPage() {
             </Link>
           </div>
         </div>
-        <div className="absolute bottom-8 left-6 right-6 text-white">
-          <div className="mt-3 flex flex-wrap gap-3 text-xs">
+        <div className="absolute bottom-8 left-4 right-4 text-white">
+          {/* Top row */}
+          <div className="flex items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1">
-              <Clock className="h-3 w-3" /> {t.businessHours?.open}-
-              {t.businessHours?.close}
+              <Clock className="h-3 w-3 shrink-0" />
+              {t.businessHours?.open}-{t.businessHours?.close}
             </span>
+
             {t.phone && (
               <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1">
-                <Phone className="h-3 w-3" />
+                <Phone className="h-3 w-3 shrink-0" />
                 <Link href={`tel:+91-${t.phone}`}>+91-{t.phone}</Link>
               </span>
             )}
+          </div>
+
+          {/* Bottom row */}
+          <div className="mt-2 flex items-end justify-between gap-2">
+            {/* Address */}
             {t.address && (
-              <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1 w-2/3 sm:w-auto">
-                <MapPin className="w-3" /> {t.address}
+              <span className="inline-flex min-w-0 max-w-[calc(100%-125px)] items-start gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1 text-xs">
+                <MapPin className="w-3 h-3 shrink-0 mt-[2px]" />
+                <span className="break-words">{t.address}</span>
               </span>
             )}
-          </div>
-        </div>
-        <div className="absolute bottom-8 left-6 right-6 flex justify-end text-white">
-          <div className="mt-3 flex flex-wrap justify-end gap-3 text-xs">
-            {/* Mobile diet toggle */}
-            <div className="">
+
+            {/* Diet filter */}
+            <div className="shrink-0">
               <div
                 className="
-      relative flex items-center
-      h-8 w-[118px]
-      rounded-full
-      bg-neutral-100
-      p-1
-      shadow-inner
-      border border-neutral-200
-      overflow-hidden
-    "
+          relative flex items-center
+          h-8 w-[118px]
+          rounded-full
+          bg-neutral-100
+          p-1
+          shadow-inner
+          border border-neutral-200
+          overflow-hidden
+        "
               >
-                {/* Sliding active background */}
+                {/* Sliding background */}
                 <div
                   className={`
-        absolute top-1 bottom-1
-        w-[36px]
-        rounded-full
-        bg-white
-        shadow-[0_2px_8px_rgba(0,0,0,0.15)]
-        transition-all duration-300 ease-[cubic-bezier(.4,0,.2,1)]
-        ${
-          dietFilter === "all"
-            ? "left-1"
-            : dietFilter === "veg"
-              ? "left-[41px]"
-              : "left-[80px]"
-        }
-      `}
+            absolute top-1 bottom-1
+            w-[36px]
+            rounded-full
+            bg-white
+            shadow-[0_2px_8px_rgba(0,0,0,0.15)]
+            transition-all duration-300
+            ${
+              dietFilter === "all"
+                ? "left-1"
+                : dietFilter === "veg"
+                  ? "left-[41px]"
+                  : "left-[80px]"
+            }
+          `}
                 />
 
                 {/* All */}
@@ -249,13 +254,12 @@ export default function StorefrontPage() {
                   type="button"
                   onClick={() => setDietFilter("all")}
                   className="
-        relative z-10
-        flex-1 h-full
-        flex items-center justify-center
-        text-[11px] font-semibold
-        active:scale-90
-        transition-transform duration-100
-      "
+            relative z-10
+            flex-1 h-full
+            flex items-center justify-center
+            text-[11px] font-semibold
+            active:scale-90
+          "
                   style={{
                     color: dietFilter === "all" ? t.primaryColor : "#737373",
                   }}
@@ -268,54 +272,50 @@ export default function StorefrontPage() {
                   type="button"
                   onClick={() => setDietFilter("veg")}
                   className="
-        relative z-10
-        flex-1 h-full
-        flex items-center justify-center
-        active:scale-90
-        transition-transform duration-100
-      "
+            relative z-10
+            flex-1 h-full
+            flex items-center justify-center
+            active:scale-90
+          "
                   aria-label="Vegetarian"
                 >
                   <span
                     className={`
-          w-[9px] h-[9px]
-          rounded-full
-          border-[2px]
-          transition-all duration-200
-          ${
-            dietFilter === "veg"
-              ? "bg-green-500 border-green-600 scale-110"
-              : "bg-transparent border-green-500"
-          }
-        `}
+              w-[9px] h-[9px]
+              rounded-full
+              border-[2px]
+              ${
+                dietFilter === "veg"
+                  ? "bg-green-500 border-green-600 scale-110"
+                  : "bg-transparent border-green-500"
+              }
+            `}
                   />
                 </button>
 
-                {/* Non-veg */}
+                {/* Non veg */}
                 <button
                   type="button"
                   onClick={() => setDietFilter("nonveg")}
                   className="
-        relative z-10
-        flex-1 h-full
-        flex items-center justify-center
-        active:scale-90
-        transition-transform duration-100
-      "
+            relative z-10
+            flex-1 h-full
+            flex items-center justify-center
+            active:scale-90
+          "
                   aria-label="Non-vegetarian"
                 >
                   <span
                     className={`
-          w-[9px] h-[9px]
-          rounded-full
-          border-[2px]
-          transition-all duration-200
-          ${
-            dietFilter === "nonveg"
-              ? "bg-red-500 border-red-600 scale-110"
-              : "bg-transparent border-red-500"
-          }
-        `}
+              w-[9px] h-[9px]
+              rounded-full
+              border-[2px]
+              ${
+                dietFilter === "nonveg"
+                  ? "bg-red-500 border-red-600 scale-110"
+                  : "bg-transparent border-red-500"
+              }
+            `}
                   />
                 </button>
               </div>
@@ -391,9 +391,6 @@ export default function StorefrontPage() {
                 <AnimatePresence>
                   {prods.map((p, i) => {
                     const discountPercent = getDiscountPercent(p);
-                    const isBestseller = p.badges?.some((b) =>
-                      /bestseller|popular/i.test(b),
-                    );
                     const displayDiet = detectDiet(p);
                     return (
                       <motion.div
@@ -409,47 +406,51 @@ export default function StorefrontPage() {
                               : "hover:-translate-y-[4px] hover:shadow-xl"
                           }`}
                         >
-                          <div className="grid h-full min-h-[210px] gap-3 p-[10px] grid-cols-[160px_minmax(0,1fr)] items-center">
+                          <div className="grid h-full gap-3 p-[10px] grid-cols-[125px_minmax(0,1fr)] items-center">
                             <div
-                              className={`group relative block h-[160px] w-[160px] overflow-hidden rounded-xl bg-slate-100 ${
+                              className={`group relative block h-[120px] w-[120px] overflow-hidden rounded-xl bg-slate-100 ${
                                 p.available
                                   ? "transition duration-300 hover:scale-[1.03]"
                                   : "cursor-not-allowed"
                               }`}
                             >
-                              <div className="relative h-full w-full">
-                                {p.images?.[0] ? (
-                                  <img
-                                    loading="lazy"
-                                    src={p.images[0]}
-                                    alt={p.name}
-                                    className={`h-full w-full object-cover ${
-                                      !p.available ? "grayscale" : ""
+                              <Link
+                                href={getTenantUrl(slug, `/product/${p.id}`)}
+                              >
+                                <div className="relative h-full w-full">
+                                  {p.images?.[0] ? (
+                                    <img
+                                      loading="lazy"
+                                      src={p.images[0]}
+                                      alt={p.name}
+                                      className={`h-full w-full object-cover ${
+                                        !p.available ? "grayscale" : ""
+                                      }`}
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none";
+
+                                        const fallback =
+                                          e.currentTarget.parentElement?.querySelector(
+                                            ".image-fallback",
+                                          );
+
+                                        if (fallback) {
+                                          fallback.classList.remove("hidden");
+                                          fallback.classList.add("flex");
+                                        }
+                                      }}
+                                    />
+                                  ) : null}
+
+                                  <div
+                                    className={`image-fallback absolute inset-0 items-center justify-center bg-slate-100 text-slate-400 text-4xl ${
+                                      p.images?.[0] ? "hidden" : "flex"
                                     }`}
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none";
-
-                                      const fallback =
-                                        e.currentTarget.parentElement?.querySelector(
-                                          ".image-fallback",
-                                        );
-
-                                      if (fallback) {
-                                        fallback.classList.remove("hidden");
-                                        fallback.classList.add("flex");
-                                      }
-                                    }}
-                                  />
-                                ) : null}
-
-                                <div
-                                  className={`image-fallback absolute inset-0 items-center justify-center bg-slate-100 text-slate-400 text-4xl ${
-                                    p.images?.[0] ? "hidden" : "flex"
-                                  }`}
-                                >
-                                  🍽️
+                                  >
+                                    🍽️
+                                  </div>
                                 </div>
-                              </div>
+                              </Link>
 
                               {/* Unavailable Overlay */}
                               {!p.available && (
@@ -460,7 +461,7 @@ export default function StorefrontPage() {
                                 </div>
                               )}
 
-                              <div className="absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
+                              <div className="absolute top-1 left-1 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900 shadow-sm">
                                 <span
                                   className={`h-2.5 w-2.5 rounded-full ${
                                     displayDiet === "nonveg"
@@ -471,15 +472,15 @@ export default function StorefrontPage() {
                                 {displayDiet === "nonveg" ? "Non-Veg" : "Veg"}
                               </div>
 
-                              {isBestseller && p.available && (
-                                <span className="absolute bottom-4 left-4 rounded-full bg-amber-500 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
-                                  BESTSELLER
+                              {p.badges && p.badges != "" && p.available && (
+                                <span className="absolute bottom-1 left-1 rounded-full bg-amber-500 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-white shadow-sm">
+                                  {p.badges}
                                 </span>
                               )}
                             </div>
 
                             <div className="flex h-full flex-col justify-center gap-3">
-                              <div className="space-y-3">
+                              <div>
                                 <div className="flex items-start justify-between gap-3">
                                   {p.available ? (
                                     <Link

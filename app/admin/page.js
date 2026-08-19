@@ -319,16 +319,21 @@ ${storefrontUrl}
                 >
                   <div>
                     <div className="font-medium text-sm">
-                      {o.customer.name}{" "}
+                      {`#${o.id.slice(0, 8).toUpperCase()}`}{" "}
                       <span className="text-xs text-muted-foreground">
-                        · {o.mode}
+                        · {o.customer.phone}
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {new Date(o.createdat).toLocaleString()}
                     </div>
                   </div>
-                  <div className="font-bold text-sm">{inr(o.total)}</div>
+                  <div>
+                    <div className="font-bold text-sm">{inr(o.total)} </div>
+                    <div className="text-xs text-muted-foreground">
+                      {o.mode}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

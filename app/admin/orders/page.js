@@ -28,7 +28,7 @@ export default function AdminOrders() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-bold">
-                    {o.customer.name}{" "}
+                    {`#${o.id.slice(0, 8).toUpperCase()}`}{" "}
                     <span className="text-xs text-muted-foreground">
                       · {o.customer.phone}
                     </span>

@@ -56,6 +56,10 @@ const COMMON_ICONS = [
   "🥗",
   "🍔",
   "🌮",
+  "🥟",
+  "🥩",
+  "🍤",
+  "🍣",
 ];
 
 const FLAG_DEFS = [
