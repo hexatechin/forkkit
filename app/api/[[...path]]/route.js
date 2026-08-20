@@ -9,6 +9,7 @@ import {
   extractToken,
 } from "@/lib/auth";
 import { TEMPLATES, buildStarter } from "@/lib/templates";
+import { uploadImage, deleteImage, deleteFolder } from "@/lib/cloudinary";
 import { v4 as uuid } from "uuid";
 
 const json = (data, status = 200) => NextResponse.json(data, { status });
@@ -40,6 +41,22 @@ function buildUpdate(body, allowedFields) {
     }
   }
   return { set, values };
+}
+
+function normalizeCategoryTemplate(body) {
+  const customVariants = (body.customVariants || [])
+    .map((v) => ({
+      name: v.name?.trim(),
+      options: (v.options || [])
+        .map((o) => ({ label: o.label?.trim() }))
+        .filter((o) => o.label),
+    }))
+    .filter((v) => v.name && v.options.length);
+  const customAddons = (body.customAddons || [])
+    .map((a) => ({ name: a.name?.trim() }))
+    .filter((a) => a.name);
+  const customFlags = body.customFlags || {};
+  return { customVariants, customAddons, customFlags };
 }
 
 async function route(request, method, segments) {
@@ -163,7 +180,7 @@ async function route(request, method, segments) {
         rating: p.rating || null,
         badges: p.badges || [],
         available: true,
-        isEggOption: !!p.isEggOption,
+        diet: p.diet || "veg",
         allowCakeMessage: !!p.allowCakeMessage,
         variants: (p.variants || []).map((v) => ({
           id: uuid(),
@@ -179,7 +196,7 @@ async function route(request, method, segments) {
       .filter((p) => p.categoryId);
     for (const product of prodDocs) {
       await db.query(
-        `INSERT INTO products (id, tenantId, categoryId, name, description, images, price, discountPrice, rating, badges, available, isEggOption, allowCakeMessage, variants, addons)
+        `INSERT INTO products (id, tenantId, categoryId, name, description, images, price, discountPrice, rating, badges, available, diet, allowCakeMessage, variants, addons)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
         [
           product.id,
@@ -193,7 +210,7 @@ async function route(request, method, segments) {
           product.rating,
           jsonValue(product.badges),
           product.available,
-          product.isEggOption,
+          product.diet,
           product.allowCakeMessage,
           jsonValue(product.variants),
           jsonValue(product.addons),
@@ -240,31 +257,51 @@ async function route(request, method, segments) {
       const next = new Date(d);
       next.setDate(next.getDate() + 1);
       const dayOrders = orders.filter((o) => {
-        const t = new Date(o.createdAt);
-        return t >= d && t < next;
+        // PostgreSQL returns createdAt as "createdat"
+        if (!o.createdat) return false;
+        const orderDate = new Date(o.createdat);
+        return orderDate >= d && orderDate < next;
       });
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
       days.push({
-        date: d.toISOString().slice(5, 10),
+        date: `${month}-${day}`,
         orders: dayOrders.length,
-        revenue: dayOrders.reduce((s, o) => s + o.total, 0),
+        revenue: dayOrders.reduce(
+          (sum, order) => sum + Number(order.total || 0),
+          0,
+        ),
       });
     }
     const productTotals = {};
-    orders.forEach((o) =>
-      o.items.forEach((i) => {
-        productTotals[i.name] = (productTotals[i.name] || 0) + i.qty;
-      }),
-    );
+    orders.forEach((order) => {
+      if (!Array.isArray(order.items)) return;
+      order.items.forEach((item) => {
+        if (!item?.name) return;
+        const qty = Number(item.qty || 0);
+        productTotals[item.name] = (productTotals[item.name] || 0) + qty;
+      });
+    });
     const top = Object.entries(productTotals)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([name, qty]) => ({ name, qty }));
+      .map(([name, qty]) => ({
+        name,
+        qty,
+      }));
+
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0,
+    );
+
     return json({
       days,
       top,
       totals: {
-        orders: orders.length,
-        revenue: orders.reduce((s, o) => s + o.total, 0),
+        orders: totalOrders,
+        revenue: totalRevenue,
       },
     });
   }
@@ -333,7 +370,8 @@ async function route(request, method, segments) {
               tenantId AS "tenantId",
               name,
               order_index AS "order",
-              icon
+              icon,
+              customFlags AS "customFlags"
        FROM categories WHERE tenantId=$1 ORDER BY order_index`,
       [tenant.id],
     );
@@ -349,7 +387,7 @@ async function route(request, method, segments) {
               rating,
               badges,
               available,
-              isEggOption AS "isEggOption",
+              diet,
               allowCakeMessage AS "allowCakeMessage",
               variants,
               addons
@@ -392,7 +430,7 @@ async function route(request, method, segments) {
               rating,
               badges,
               available,
-              isEggOption AS "isEggOption",
+              diet,
               allowCakeMessage AS "allowCakeMessage",
               variants,
               addons
@@ -426,8 +464,11 @@ async function route(request, method, segments) {
       notes,
       items,
     } = body;
-    if (!tenantSlug || !customer?.name || !customer?.phone || !items?.length)
+    if (!tenantSlug || !customer?.phone || !items?.length)
       return err("missing required fields");
+
+    if (mode === "dine-in" && !customer?.tableNumber)
+      return err("table number is required");
 
     const { rows: tenantRows } = await db.query(
       `SELECT id, name,
@@ -444,7 +485,7 @@ async function route(request, method, segments) {
     const deliveryFee = mode === "delivery" ? tenant.deliveryFee || 0 : 0;
     const total = subtotal + deliveryFee;
 
-    if (total < (tenant.minOrder || 0))
+    if (mode === "delivery" && subtotal < (tenant.minOrder || 0))
       return err(`Minimum order is ₹${tenant.minOrder}`);
 
     const orderId = uuid();
@@ -471,37 +512,88 @@ async function route(request, method, segments) {
     );
 
     const lines = [];
-    lines.push(`*New Order — ${tenant.name}*`);
-    lines.push(`Order ID: ${orderId.slice(0, 8).toUpperCase()}`);
+
+    lines.push(`🎉 *New Order #${orderId.slice(0, 8).toUpperCase()}*`);
+    lines.push(``);
+    lines.push(`👋 *Hi ${tenant.name}!*`);
     lines.push("");
-    lines.push(`*Customer:* ${customer.name}`);
-    lines.push(`*Phone:* ${customer.phone}`);
-    if (mode === "delivery")
-      lines.push(`*Address:* ${customer.address || "-"}`);
-    lines.push(`*Mode:* ${mode === "delivery" ? "🚚 Delivery" : "🏪 Pickup"}`);
-    if (scheduledAt) lines.push(`*Scheduled:* ${scheduledAt}`);
-    if (occasion) lines.push(`*Occasion:* ${occasion}`);
-    if (cakeMessage) lines.push(`*Cake message:* ${cakeMessage}`);
-    lines.push("");
-    lines.push("*Items:*");
-    items.forEach((i) => {
-      const opts = [];
-      if (i.variantLabel) opts.push(i.variantLabel);
-      if (i.eggChoice) opts.push(i.eggChoice);
-      if (i.addons?.length) opts.push(i.addons.map((a) => a.name).join(", "));
-      const line = `  • ${i.qty} × ${i.name}${opts.length ? " (" + opts.join(" | ") + ")" : ""} — ₹${(i.unitPrice * i.qty).toLocaleString("en-IN")}`;
-      lines.push(line);
-    });
-    lines.push("");
-    lines.push(`*Subtotal:* ₹${subtotal.toLocaleString("en-IN")}`);
-    if (deliveryFee) lines.push(`*Delivery:* ₹${deliveryFee.toLocaleString("en-IN")}`);
-    lines.push(`*Total:* *₹${total.toLocaleString("en-IN")}*`);
-    if (notes) {
-      lines.push("");
-      lines.push(`*Notes:* ${notes}`);
+
+    if (mode === "delivery") {
+      lines.push(`📍 ${customer.address || "-"}`);
     }
 
+    if (mode === "dine-in") {
+      lines.push(`🪑 *Table Number:* ${customer.tableNumber || "-"}`);
+    }
+
+    lines.push(
+      `${mode === "delivery" ? "🚚" : mode === "dine-in" ? "🍽️" : "🏪"} *Mode:* ${
+        mode === "delivery"
+          ? "Delivery"
+          : mode === "dine-in"
+            ? "Dine-in"
+            : "Pickup"
+      }`,
+    );
+
+    if (scheduledAt) {
+      lines.push(`🕐 *Scheduled:* ${scheduledAt}`);
+    }
+
+    if (occasion) {
+      lines.push(`🎉 *Occasion:* ${occasion}`);
+    }
+
+    lines.push("");
+    lines.push(`🍽️ *Items:*`);
+
+    items.forEach((i) => {
+      const opts = [];
+
+      if (i.variantLabel) {
+        opts.push(`📏 ${i.variantLabel}`);
+      }
+
+      if (i.addons?.length) {
+        opts.push(`➕ ${i.addons.map((a) => a.name).join(", ")}`);
+      }
+
+      lines.push(`🔹 *${i.qty} × ${i.name}*`);
+
+      if (opts.length) {
+        opts.forEach((option) => {
+          lines.push(`   ${option}`);
+        });
+      }
+
+      if (i.cakeMessage) {
+        lines.push(`   💬 ${i.cakeMessage}`);
+      }
+
+      lines.push(`   💰 ₹${(i.unitPrice * i.qty).toLocaleString("en-IN")}`);
+    });
+
+    lines.push("");
+
+    lines.push(`🧾 Subtotal: ₹${subtotal.toLocaleString("en-IN")}`);
+
+    if (deliveryFee) {
+      lines.push(`🚚 Delivery: ₹${deliveryFee.toLocaleString("en-IN")}`);
+    }
+
+    lines.push(`💰 *TOTAL: ₹${total.toLocaleString("en-IN")}*`);
+
+    if (notes) {
+      lines.push("");
+      lines.push(`📝 *Customer Notes*`);
+      lines.push(notes);
+    }
+
+    lines.push("");
+    lines.push(`✨ *Looking forward to it! Thank you!*`);
+
     const message = lines.join("\n");
+
     const whatsappUrl = `https://wa.me/${tenant.whatsappNumber}?text=${encodeURIComponent(message)}`;
 
     return json({ orderId, whatsappUrl, message, total });
@@ -552,6 +644,117 @@ async function route(request, method, segments) {
     });
   }
 
+  // ADMIN GOOGLE AUTH
+  if (path === "/admin/auth/google" && method === "POST") {
+    try {
+      const { credential } = await request.json();
+
+      if (!credential) {
+        return err("Google credential is required", 400);
+      }
+
+      // Verify Google ID token
+      const response = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(
+          credential,
+        )}`,
+      );
+
+      if (!response.ok) {
+        return err("Invalid Google credential", 401);
+      }
+
+      const googleUser = await response.json();
+
+      const googleClientId = process.env.GOOGLE_CLIENT_ID;
+
+      // Make sure token belongs to our Google application
+      if (!googleClientId || googleUser.aud !== googleClientId) {
+        return err("Invalid Google client", 401);
+      }
+
+      const email = (googleUser.email || "").toLowerCase();
+
+      if (!email) {
+        return err("Google account email not available", 401);
+      }
+
+      // Google should confirm the email
+      if (googleUser.email_verified !== "true") {
+        return err("Google email is not verified", 401);
+      }
+
+      // Find existing user
+      const { rows: userRows } = await db.query(
+        `SELECT id,
+              tenantId AS "tenantId",
+              email,
+              name,
+              role
+       FROM users
+       WHERE email=$1`,
+        [email],
+      );
+
+      const user = userRows[0];
+
+      // Don't create an admin automatically
+      if (!user) {
+        return err("No admin account exists for this Google email", 403);
+      }
+
+      // Only admin users can use Google admin login
+      if (!["owner", "manager", "super_admin"].includes(user.role)) {
+        return err("You do not have admin access", 403);
+      }
+
+      // Get tenant
+      const { rows: tenantRows } = await db.query(
+        `SELECT slug, name, primaryColor
+       FROM tenants
+       WHERE id=$1`,
+        [user.tenantId],
+      );
+
+      const tenant = tenantRows[0];
+
+      if (!tenant) {
+        return err("Tenant not found", 404);
+      }
+
+      // Use the SAME JWT system as normal login
+      const token = signToken({
+        userId: user.id,
+        tenantId: user.tenantId,
+        role: user.role,
+        email: user.email,
+        name: user.name,
+      });
+
+      // Return SAME response structure as normal login
+      return json({
+        token,
+
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
+
+        tenant: {
+          slug: tenant.slug,
+          name: tenant.name,
+          primaryColor: tenant.primaryColor,
+        },
+      });
+    } catch (error) {
+      console.error("Google admin login error:", error);
+
+      return err("Google login failed", 500);
+    }
+  }
+
   if (path === "/admin/me" && method === "GET") {
     const { user, error } = await requireAuth(request);
     if (error) return error;
@@ -599,7 +802,7 @@ async function route(request, method, segments) {
               rating,
               badges,
               available,
-              isEggOption AS "isEggOption",
+              diet,
               allowCakeMessage AS "allowCakeMessage",
               variants,
               addons
@@ -636,7 +839,7 @@ async function route(request, method, segments) {
       ...body,
     };
     await db.query(
-      `INSERT INTO products (id, tenantId, categoryId, name, description, images, price, discountPrice, rating, badges, available, isEggOption, allowCakeMessage, variants, addons)
+      `INSERT INTO products (id, tenantId, categoryId, name, description, images, price, discountPrice, rating, badges, available, diet, allowCakeMessage, variants, addons)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
         product.id,
@@ -650,7 +853,7 @@ async function route(request, method, segments) {
         product.rating || null,
         jsonValue(product.badges),
         product.available,
-        product.isEggOption || false,
+        product.diet || "veg",
         product.allowCakeMessage || false,
         jsonValue(product.variants),
         jsonValue(product.addons),
@@ -682,8 +885,10 @@ async function route(request, method, segments) {
     ]);
     if (error) return error;
     const body = await request.json();
-    const { name, icon, customVariants, customAddons, customFlags } = body;
+    const { name, icon } = body;
     if (!name) return err("Missing category name");
+    const { customVariants, customAddons, customFlags } =
+      normalizeCategoryTemplate(body);
     const { rows } = await db.query(
       `SELECT COALESCE(MAX(order_index),0)+1 AS next_order FROM categories WHERE tenantId=$1`,
       [user.tenantId],
@@ -694,7 +899,11 @@ async function route(request, method, segments) {
       `INSERT INTO categories (id, tenantId, name, order_index, icon, customVariants, customAddons, customFlags)
        VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb)`,
       [
-        id, user.tenantId, name, order_index, icon || null,
+        id,
+        user.tenantId,
+        name,
+        order_index,
+        icon || null,
         JSON.stringify(customVariants || []),
         JSON.stringify(customAddons || []),
         JSON.stringify(customFlags || {}),
@@ -730,15 +939,35 @@ async function route(request, method, segments) {
       const setParts = [];
       const values = [];
       let idx = 1;
-      if (body.name !== undefined) { setParts.push(`name=$${idx++}`); values.push(body.name); }
-      if (body.icon !== undefined) { setParts.push(`icon=$${idx++}`); values.push(body.icon); }
-      if (body.order_index !== undefined) { setParts.push(`order_index=$${idx++}`); values.push(body.order_index); }
-      if (body.customVariants !== undefined) { setParts.push(`customVariants=$${idx++}::jsonb`); values.push(JSON.stringify(body.customVariants)); }
-      if (body.customAddons !== undefined) { setParts.push(`customAddons=$${idx++}::jsonb`); values.push(JSON.stringify(body.customAddons)); }
-      if (body.customFlags !== undefined) { setParts.push(`customFlags=$${idx++}::jsonb`); values.push(JSON.stringify(body.customFlags)); }
+      if (body.name !== undefined) {
+        setParts.push(`name=$${idx++}`);
+        values.push(body.name);
+      }
+      if (body.icon !== undefined) {
+        setParts.push(`icon=$${idx++}`);
+        values.push(body.icon);
+      }
+      if (body.order_index !== undefined) {
+        setParts.push(`order_index=$${idx++}`);
+        values.push(body.order_index);
+      }
+      if (body.customVariants !== undefined) {
+        const { customVariants } = normalizeCategoryTemplate(body);
+        setParts.push(`customVariants=$${idx++}::jsonb`);
+        values.push(JSON.stringify(customVariants));
+      }
+      if (body.customAddons !== undefined) {
+        const { customAddons } = normalizeCategoryTemplate(body);
+        setParts.push(`customAddons=$${idx++}::jsonb`);
+        values.push(JSON.stringify(customAddons));
+      }
+      if (body.customFlags !== undefined) {
+        setParts.push(`customFlags=$${idx++}::jsonb`);
+        values.push(JSON.stringify(body.customFlags));
+      }
       if (setParts.length) {
         await db.query(
-          `UPDATE categories SET ${setParts.join(", ")} WHERE id=$${idx} AND tenantId=$${idx+1}`,
+          `UPDATE categories SET ${setParts.join(", ")} WHERE id=$${idx} AND tenantId=$${idx + 1}`,
           [...values, cid, user.tenantId],
         );
       }
@@ -798,7 +1027,7 @@ async function route(request, method, segments) {
         "rating",
         "badges",
         "available",
-        "isEggOption",
+        "diet",
         "allowCakeMessage",
         "variants",
         "addons",
@@ -884,6 +1113,285 @@ async function route(request, method, segments) {
       );
     }
     return json({ ok: true });
+  }
+
+  // ADMIN UPLOAD-IMAGE
+  if (path === "/admin/upload-image" && method === "POST") {
+    const { user, error } = await requireAuth(request, [
+      "owner",
+      "manager",
+      "super_admin",
+    ]);
+
+    if (error) return error;
+
+    try {
+      const formData = await request.formData();
+
+      const file = formData.get("file");
+      const storefrontId = formData.get("storefrontId");
+      const type = formData.get("type");
+      const folder = formData.get("folder");
+
+      if (!(file instanceof File)) {
+        return err("No image file provided");
+      }
+
+      if (!storefrontId) {
+        return err("Storefront ID is required");
+      }
+
+      if (!type) {
+        return err("Image type is required");
+      }
+
+      if (!file.type.startsWith("image/")) {
+        return err("Only image files are allowed");
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        return err("Image must be smaller than 5MB");
+      }
+
+      // Optional but recommended:
+      // Make sure the authenticated user can only upload
+      // images for their own storefront.
+      if (String(storefrontId) !== String(user.tenantId)) {
+        return err("Unauthorized storefront");
+      }
+
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      const result = await uploadImage({
+        buffer,
+        storefrontId,
+        folder: folder || "general",
+        type,
+      });
+
+      return json({
+        success: true,
+        ...result,
+      });
+    } catch (error) {
+      console.error("Image upload error:", error);
+
+      return err(error?.message || "Image upload failed", 500);
+    }
+  }
+
+  // ADMIN UPLOAD-IMAGES
+  if (path === "/admin/upload-images" && method === "POST") {
+    const { user, error } = await requireAuth(request, [
+      "owner",
+      "manager",
+      "super_admin",
+    ]);
+
+    if (error) return error;
+
+    try {
+      const formData = await request.formData();
+
+      const files = formData.getAll("files");
+      const storefrontId = formData.get("storefrontId");
+      const type = formData.get("type");
+      const folder = formData.get("folder");
+
+      // Maximum 5 images per upload
+      if (files.length > 5) {
+        return err("Maximum 5 images can be uploaded at once");
+      }
+
+      if (!storefrontId) {
+        return err("Storefront ID is required");
+      }
+
+      if (!type) {
+        return err("Image type is required");
+      }
+
+      // User can only upload to their own storefront
+      if (String(storefrontId) !== String(user.tenantId)) {
+        return err("Unauthorized storefront");
+      }
+
+      if (!files.length) {
+        return err("No image files provided");
+      }
+
+      const uploadedImages = [];
+
+      for (const file of files) {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        const result = await uploadImage({
+          buffer,
+          storefrontId,
+          folder: folder || "general",
+          type,
+        });
+
+        uploadedImages.push(result);
+      }
+
+      return json({
+        success: true,
+        count: uploadedImages.length,
+        images: uploadedImages,
+      });
+    } catch (error) {
+      console.error("Bulk image upload error:", error);
+
+      return err(error?.message || "Image upload failed", 500);
+    }
+  }
+
+  // ADMIN DELETE-IMAGE
+  if (path === "/admin/delete-image" && method === "DELETE") {
+    const { user, error } = await requireAuth(request, [
+      "owner",
+      "manager",
+      "super_admin",
+    ]);
+
+    console.log("Calling started ...");
+
+    if (error) return error;
+
+    try {
+      const body = await request.json();
+
+      const storefrontId = body.storefrontId;
+
+      const images = Array.isArray(body.images)
+        ? body.images
+        : body.image
+          ? [body.image]
+          : [];
+
+      if (!storefrontId) {
+        return err("Storefront ID is required");
+      }
+
+      if (images.length === 0) {
+        return err("Cloudinary image URL is required");
+      }
+
+      if (String(storefrontId) !== String(user.tenantId)) {
+        return err("Unauthorized storefront");
+      }
+
+      const results = [];
+
+      for (const imageUrl of images) {
+        if (!imageUrl || typeof imageUrl !== "string") {
+          results.push({
+            imageUrl,
+            success: false,
+            error: "Invalid Cloudinary image URL",
+          });
+          continue;
+        }
+
+        try {
+          const result = await deleteImage(imageUrl);
+
+          results.push({
+            imageUrl,
+            success: true,
+            result,
+          });
+        } catch (error) {
+          console.error(`Cloudinary delete error for ${imageUrl}:`, error);
+
+          results.push({
+            imageUrl,
+            success: false,
+            error: error?.message || "Image deletion failed",
+          });
+        }
+      }
+
+      const failed = results.filter((item) => !item.success);
+
+      return json({
+        success: failed.length === 0,
+        count: results.length,
+        deleted: results.filter((item) => item.success).length,
+        failed: failed.length,
+        results,
+      });
+    } catch (error) {
+      console.error("Image delete error:", error);
+
+      return err(error?.message || "Image deletion failed", 500);
+    }
+  }
+
+  // ADMIN DELETE-FOLDER
+  if (path === "/admin/delete-folder" && method === "DELETE") {
+    const { user, error } = await requireAuth(request, [
+      "owner",
+      "manager",
+      "super_admin",
+    ]);
+
+    if (error) return error;
+
+    try {
+      const body = await request.json();
+
+      const storefrontId = body.storefrontId;
+      const folder = body.folder;
+
+      if (!storefrontId) {
+        return err("Storefront ID is required");
+      }
+
+      if (!folder) {
+        return err("Cloudinary folder is required");
+      }
+
+      // User can only delete files from their own storefront.
+      if (String(storefrontId) !== String(user.tenantId)) {
+        return err("Unauthorized storefront");
+      }
+
+      /*
+       * IMPORTANT:
+       *
+       * Do not allow an arbitrary Cloudinary folder to be deleted.
+       * The folder must belong to the storefront.
+       */
+      const prefix = `indocia/${process.env.NODE_ENV}/${storefrontId}/${folder}`
+        .replace(/\/+/g, "/")
+        .replace(/\/$/, "");
+
+      console.log("Deleting Cloudinary resources by prefix:", prefix);
+
+      const result = await deleteFolder(prefix + "/");
+
+      return json({
+        success: true,
+        message: "Cloudinary folder deleted",
+        result,
+      });
+    } catch (error) {
+      console.error("Cloudinary folder deletion error:", error);
+
+      return err(error?.message || "Failed to delete Cloudinary folder", 500);
+    }
+  }
+
+  // HEALTH CHECK UPTIME
+  if (path === "/health" && method === "GET") {
+    return Response.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+    });
   }
 
   return err(`Not found: ${method} ${path}`, 404);
