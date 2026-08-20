@@ -118,7 +118,7 @@ export default function StorefrontPage() {
       block: "start",
     });
   };
-  const quickAdd = (p) => {
+  const quickAdd = (p, cIcon) => {
     const unitPrice = p.discountPrice || p.price;
     addItem({
       productId: p.id,
@@ -129,6 +129,7 @@ export default function StorefrontPage() {
       variantLabel: null,
       addons: [],
       diet: p.diet || "veg",
+      catIcon: cIcon || "🍽️",
     });
   };
 
@@ -210,43 +211,43 @@ export default function StorefrontPage() {
           <div className="mt-2 flex items-end justify-between gap-2">
             {/* Address */}
             {t.address && (
-              <span className="inline-flex min-w-0 max-w-[calc(100%-125px)] items-start gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1 text-xs">
+              <span className="min-w-0 flex-1 inline-flex items-start gap-1 bg-white/20 backdrop-blur rounded-full px-3 py-1 text-xs">
                 <MapPin className="w-3 h-3 shrink-0 mt-[2px]" />
-                <span className="break-words">{t.address}</span>
+                <span className="break-words min-w-0">{t.address}</span>
               </span>
             )}
 
-            {/* Diet filter */}
-            <div className="shrink-0">
+            {/* Diet filter - always right */}
+            <div className="shrink-0 ml-auto">
               <div
                 className="
-          relative flex items-center
-          h-8 w-[118px]
-          rounded-full
-          bg-neutral-100
-          p-1
-          shadow-inner
-          border border-neutral-200
-          overflow-hidden
-        "
+        relative flex items-center
+        h-8 w-[118px]
+        rounded-full
+        bg-neutral-100
+        p-1
+        shadow-inner
+        border border-neutral-200
+        overflow-hidden
+      "
               >
                 {/* Sliding background */}
                 <div
                   className={`
-            absolute top-1 bottom-1
-            w-[36px]
-            rounded-full
-            bg-white
-            shadow-[0_2px_8px_rgba(0,0,0,0.15)]
-            transition-all duration-300
-            ${
-              dietFilter === "all"
-                ? "left-1"
-                : dietFilter === "veg"
-                  ? "left-[41px]"
-                  : "left-[80px]"
-            }
-          `}
+          absolute top-1 bottom-1
+          w-[36px]
+          rounded-full
+          bg-white
+          shadow-[0_2px_8px_rgba(0,0,0,0.15)]
+          transition-all duration-300
+          ${
+            dietFilter === "all"
+              ? "left-1"
+              : dietFilter === "veg"
+                ? "left-[41px]"
+                : "left-[80px]"
+          }
+        `}
                 />
 
                 {/* All */}
@@ -254,12 +255,12 @@ export default function StorefrontPage() {
                   type="button"
                   onClick={() => setDietFilter("all")}
                   className="
-            relative z-10
-            flex-1 h-full
-            flex items-center justify-center
-            text-[11px] font-semibold
-            active:scale-90
-          "
+          relative z-10
+          flex-1 h-full
+          flex items-center justify-center
+          text-[11px] font-semibold
+          active:scale-90
+        "
                   style={{
                     color: dietFilter === "all" ? t.primaryColor : "#737373",
                   }}
@@ -272,24 +273,24 @@ export default function StorefrontPage() {
                   type="button"
                   onClick={() => setDietFilter("veg")}
                   className="
-            relative z-10
-            flex-1 h-full
-            flex items-center justify-center
-            active:scale-90
-          "
+          relative z-10
+          flex-1 h-full
+          flex items-center justify-center
+          active:scale-90
+        "
                   aria-label="Vegetarian"
                 >
                   <span
                     className={`
-              w-[9px] h-[9px]
-              rounded-full
-              border-[2px]
-              ${
-                dietFilter === "veg"
-                  ? "bg-green-500 border-green-600 scale-110"
-                  : "bg-transparent border-green-500"
-              }
-            `}
+            w-[9px] h-[9px]
+            rounded-full
+            border-[2px]
+            ${
+              dietFilter === "veg"
+                ? "bg-green-500 border-green-600 scale-110"
+                : "bg-transparent border-green-500"
+            }
+          `}
                   />
                 </button>
 
@@ -298,24 +299,24 @@ export default function StorefrontPage() {
                   type="button"
                   onClick={() => setDietFilter("nonveg")}
                   className="
-            relative z-10
-            flex-1 h-full
-            flex items-center justify-center
-            active:scale-90
-          "
+          relative z-10
+          flex-1 h-full
+          flex items-center justify-center
+          active:scale-90
+        "
                   aria-label="Non-vegetarian"
                 >
                   <span
                     className={`
-              w-[9px] h-[9px]
-              rounded-full
-              border-[2px]
-              ${
-                dietFilter === "nonveg"
-                  ? "bg-red-500 border-red-600 scale-110"
-                  : "bg-transparent border-red-500"
-              }
-            `}
+            w-[9px] h-[9px]
+            rounded-full
+            border-[2px]
+            ${
+              dietFilter === "nonveg"
+                ? "bg-red-500 border-red-600 scale-110"
+                : "bg-transparent border-red-500"
+            }
+          `}
                   />
                 </button>
               </div>
@@ -415,7 +416,10 @@ export default function StorefrontPage() {
                               }`}
                             >
                               <Link
-                                href={getTenantUrl(slug, `/product/${p.id}`)}
+                                href={getTenantUrl(
+                                  slug,
+                                  `/product/${p.id}?cat=${c.icon}`,
+                                )}
                               >
                                 <div className="relative h-full w-full">
                                   {p.images?.[0] ? (
@@ -447,7 +451,7 @@ export default function StorefrontPage() {
                                       p.images?.[0] ? "hidden" : "flex"
                                     }`}
                                   >
-                                    🍽️
+                                    {c.icon}
                                   </div>
                                 </div>
                               </Link>
@@ -486,7 +490,7 @@ export default function StorefrontPage() {
                                     <Link
                                       href={getTenantUrl(
                                         slug,
-                                        `/product/${p.id}`,
+                                        `/product/${p.id}?cat=${c.icon}`,
                                       )}
                                       className="min-w-0 text-[15px] font-semibold leading-[1.3] text-slate-900 line-clamp-2 hover:underline"
                                     >
@@ -532,7 +536,7 @@ export default function StorefrontPage() {
                                     <Link
                                       href={getTenantUrl(
                                         slug,
-                                        `/product/${p.id}`,
+                                        `/product/${p.id}?cat=${c.icon}`,
                                       )}
                                     >
                                       <Button
@@ -586,7 +590,7 @@ export default function StorefrontPage() {
 
                                           <button
                                             type="button"
-                                            onClick={() => quickAdd(p)}
+                                            onClick={() => quickAdd(p, c.icon)}
                                             className="flex h-full w-1/3 items-center justify-center text-white"
                                             style={{
                                               background: t.primaryColor,
@@ -600,7 +604,7 @@ export default function StorefrontPage() {
                                           className="mt-2"
                                           size="sm"
                                           disabled={!p.available}
-                                          onClick={() => quickAdd(p)}
+                                          onClick={() => quickAdd(p, c.icon)}
                                           style={{
                                             background: t.primaryColor,
                                             color: "white",
