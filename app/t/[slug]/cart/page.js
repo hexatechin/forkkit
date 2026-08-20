@@ -37,6 +37,7 @@ export default function CartPage() {
     scheduledAt: "",
   });
   const [placing, setPlacing] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -141,19 +142,17 @@ export default function CartPage() {
                 >
                   <Card className="p-4 flex gap-4">
                     <div className="relative h-20 w-20 overflow-hidden rounded-lg bg-neutral-100">
-                      {i.image ? (
+                      {!i.image || imageError ? (
+                        <div className="flex h-full w-full items-center justify-center text-3xl">
+                          {i.catIcon || "🍽️"}
+                        </div>
+                      ) : (
                         <img
                           src={i.image}
                           alt={i.name}
                           className="h-full w-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
+                          onError={() => setImageError(true)}
                         />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-3xl">
-                          🍽️
-                        </div>
                       )}
 
                       {i.diet && i.diet !== "all" && (

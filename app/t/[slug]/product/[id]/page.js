@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,9 @@ const detectDiet = (product) => {
 };
 
 export default function ProductDetail() {
-  const { slug, id } = useParams();
+  const { slug, id, cat } = useParams();
+  const searchParams = useSearchParams();
+  const catIcon = searchParams.get("cat");
   const router = useRouter();
   const [data, setData] = useState(null);
   const [imgIdx, setImgIdx] = useState(0);
@@ -115,7 +117,7 @@ export default function ProductDetail() {
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-4xl">
-                  🍽️
+                  {catIcon || "🍽️"}
                 </div>
               )}
 

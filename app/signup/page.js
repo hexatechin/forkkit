@@ -14,11 +14,13 @@ import {
   Flower2,
   Gift,
   UtensilsCrossed,
+  Utensils,
   Store,
   Briefcase,
   ArrowRight,
   ArrowLeft,
   Check,
+  Leaf,
 } from "lucide-react";
 
 const TEMPLATES = [
@@ -53,6 +55,22 @@ const TEMPLATES = [
     color: "#0f766e",
     accent: "#99f6e4",
     tint: "#f0fdfa",
+  },
+  {
+    id: "restaurant",
+    label: "Restaurant",
+    icon: Utensils,
+    color: "#b91c1c",
+    accent: "#fca5a5",
+    tint: "#fef2f2",
+  },
+  {
+    id: "fresh_market",
+    label: "Fruits & Vegetables",
+    icon: Leaf,
+    color: "#16a34a",
+    accent: "#93dfa4",
+    tint: "#f0fdf4",
   },
   // {
   //   id: "florist",
