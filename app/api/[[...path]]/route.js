@@ -22,6 +22,124 @@ const jsonValue = (value) => {
   return value;
 };
 
+const RESERVED_SLUGS = [
+  "shop",
+  "store",
+  "hotel",
+  "saloon",
+  "salon",
+  "restaurant",
+  "cafe",
+  "bakery",
+  "food",
+  "foods",
+  "tiffin",
+  "kitchen",
+  "cloudkitchen",
+  "market",
+  "freshmarket",
+  "business",
+  "businesses",
+  "company",
+  "admin",
+  "administrator",
+  "login",
+  "signup",
+  "signin",
+  "register",
+  "account",
+  "user",
+  "users",
+  "api",
+  "www",
+  "mail",
+  "support",
+  "help",
+  "contact",
+  "about",
+  "home",
+  "product",
+  "products",
+  "category",
+  "categories",
+  "checkout",
+  "cart",
+  "order",
+  "orders",
+  "payment",
+  "payments",
+  "dashboard",
+  "settings",
+  "profile",
+  "test",
+  "demo",
+  "dev",
+  "development",
+  "staging",
+  "app",
+  "indocia",
+];
+
+function normalizeSlug(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+}
+
+function isReservedSlug(slug) {
+  return RESERVED_SLUGS.includes(slug);
+}
+
+async function checkSlug(db, slug) {
+  const normalizedSlug = normalizeSlug(slug);
+
+  if (!normalizedSlug) {
+    return {
+      available: false,
+      slug: normalizedSlug,
+      error: "Slug is required",
+    };
+  }
+
+  if (normalizedSlug.length < 3) {
+    return {
+      available: false,
+      slug: normalizedSlug,
+      error: "Slug must be at least 3 characters",
+    };
+  }
+
+  if (isReservedSlug(normalizedSlug)) {
+    return {
+      available: false,
+      slug: normalizedSlug,
+      error: "This name is reserved. Please choose another name.",
+    };
+  }
+
+  const { rows } = await db.query(`SELECT id FROM tenants WHERE slug=$1`, [
+    normalizedSlug,
+  ]);
+
+  if (rows.length) {
+    return {
+      available: false,
+      slug: normalizedSlug,
+      error: "This storefront name is already taken",
+    };
+  }
+
+  return {
+    available: true,
+    slug: normalizedSlug,
+    error: null,
+  };
+}
+
 async function requireAuth(request, roles = null) {
   const token = extractToken(request);
   const payload = verifyToken(token);
@@ -70,12 +188,27 @@ async function route(request, method, segments) {
     return json(r);
   }
 
+  // GET /api/check-slug?slug=...
+  if (path === "/check-slug" && method === "GET") {
+    const { searchParams } = new URL(request.url);
+    const slug = searchParams.get("slug") || "";
+
+    try {
+      const result = await checkSlug(db, slug);
+      return json(result);
+    } catch (error) {
+      console.error("Slug check error:", error);
+      return err("Unable to check storefront name", 500);
+    }
+  }
+
   // POST /api/signup  { template, businessName, tagline, ownerName, email, password, whatsappNumber, phone, address }
   if (path === "/signup" && method === "POST") {
     const body = await request.json();
     const {
       template,
       businessName,
+      slug: requestedSlug,
       tagline,
       ownerName,
       email,
@@ -97,11 +230,20 @@ async function route(request, method, segments) {
 
     // Slugify + ensure unique
     let baseSlug =
+      normalizeSlug(requestedSlug) ||
       businessName
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "")
-        .slice(0, 40) || "shop";
+        .slice(0, 40) ||
+      "shop";
+
+    const slugCheck = await checkSlug(db, baseSlug);
+
+    if (!slugCheck.available) {
+      return err(slugCheck.error || "Storefront name is not available", 409);
+    }
+
     let slug = baseSlug;
     let n = 1;
     while (true) {
