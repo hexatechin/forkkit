@@ -24,11 +24,29 @@ export default function Landing() {
   const rotY = useTransform(mx, [-0.5, 0.5], [-12, 12]);
 
   useEffect(() => {
-    fetch("/api/seed", { method: "POST" }).finally(() => {
-      fetch("/api/tenants")
-        .then((r) => r.json())
-        .then((d) => setTenants(d.tenants || []));
-    });
+    fetch("/api/seed", { method: "POST" })
+      .then(async (r) => {
+        console.log("SEED STATUS:", r.status);
+        console.log("SEED RESPONSE:", await r.text());
+      })
+      .catch((err) => {
+        console.error("SEED FETCH ERROR:", err);
+      })
+      .finally(() => {
+        fetch("/api/tenants")
+          .then(async (r) => {
+            const text = await r.text();
+            try {
+              const d = JSON.parse(text);
+              setTenants(d.tenants || []);
+            } catch (e) {
+              console.error("TENANTS JSON ERROR:", e);
+            }
+          })
+          .catch((err) => {
+            console.error("TENANTS FETCH ERROR:", err);
+          });
+      });
   }, []);
 
   const onMove = (e) => {

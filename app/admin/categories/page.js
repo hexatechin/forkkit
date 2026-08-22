@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
   X,
   Settings2,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -85,6 +87,11 @@ export default function AdminCategories() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [f, setF] = useState(emptyCategory);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState({
+    open: false,
+    category: null,
+  });
 
   const load = async () => {
     setLoading(true);
@@ -126,6 +133,7 @@ export default function AdminCategories() {
   };
 
   const save = async () => {
+    if (saving) return;
     if (!f.name.trim()) return toast.error("Category name is required");
     // Clean out empty rows
     const customVariants = (f.customVariants || [])
@@ -142,51 +150,85 @@ export default function AdminCategories() {
     const cleanFlags = { ...(f.customFlags || {}) };
     delete cleanFlags.diet;
     const t = localStorage.getItem("indocia-token");
+    setSaving(true);
     const url = editing
       ? `/api/admin/categories/${editing.id}`
       : "/api/admin/categories";
     const method = editing ? "PUT" : "POST";
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${t}`,
-      },
-      body: JSON.stringify({
-        name: f.name.trim(),
-        icon: f.icon,
-        customVariants,
-        customAddons,
-        customFlags: cleanFlags,
-      }),
-    });
-    if (!res.ok) {
-      const d = await res.json();
-      return toast.error(d.error || "Failed");
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${t}`,
+        },
+        body: JSON.stringify({
+          name: f.name.trim(),
+          icon: f.icon,
+          customVariants,
+          customAddons,
+          customFlags: cleanFlags,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        return toast.error(d.error || "Failed");
+      }
+      toast.success(editing ? "Category updated" : "Category added");
+      setOpen(false);
+      load();
+    } catch (error) {
+      toast.error(error?.message || "Failed");
+    } finally {
+      setSaving(false);
     }
-    toast.success(editing ? "Category updated" : "Category added");
-    setOpen(false);
-    load();
+  };
+
+  const handleConfirmDeleteCategory = async () => {
+    const c = confirmDelete.category;
+
+    if (!c) return;
+
+    setConfirmDelete({
+      open: false,
+      category: null,
+    });
+
+    try {
+      const t = localStorage.getItem("indocia-token");
+
+      const res = await fetch(`/api/admin/categories/${c.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${t}`,
+        },
+      });
+
+      if (!res.ok) {
+        const d = await res.json();
+        return toast.error(d.error || "Delete failed");
+      }
+
+      toast.success("Category deleted");
+      load();
+    } catch (error) {
+      toast.error(error.message || "Delete failed");
+    }
   };
 
   const del = async (c) => {
     const count = products.filter((p) => p.categoryId === c.id).length;
-    if (count > 0)
+
+    if (count > 0) {
       return toast.error(
         `"${c.name}" has ${count} product(s). Delete or move them first.`,
       );
-    if (!confirm(`Delete "${c.name}"?`)) return;
-    const t = localStorage.getItem("indocia-token");
-    const res = await fetch(`/api/admin/categories/${c.id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${t}` },
-    });
-    if (!res.ok) {
-      const d = await res.json();
-      return toast.error(d.error || "Delete failed");
     }
-    toast.success("Category deleted");
-    load();
+
+    setConfirmDelete({
+      open: true,
+      category: c,
+    });
   };
 
   const countFor = (cid) => products.filter((p) => p.categoryId === cid).length;
@@ -242,6 +284,28 @@ export default function AdminCategories() {
 
   return (
     <div>
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="Delete category?"
+        message={
+          <>
+            Are you sure you want to delete{" "}
+            <span className="font-semibold text-red-600">
+              "{confirmDelete.category?.name}"
+            </span>
+            ? This action cannot be undone.
+          </>
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        onCancel={() =>
+          setConfirmDelete({
+            open: false,
+            category: null,
+          })
+        }
+        onConfirm={handleConfirmDeleteCategory}
+      />
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold">Categories</h1>
@@ -590,8 +654,17 @@ export default function AdminCategories() {
               </div>
             </div>
 
-            <Button onClick={save} className="w-full h-11">
-              {editing ? "Save changes" : "Add category"}
+            <Button onClick={save} disabled={saving} className="w-full h-11">
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : editing ? (
+                "Save changes"
+              ) : (
+                "Add category"
+              )}
             </Button>
           </div>
         </DialogContent>

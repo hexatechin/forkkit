@@ -39,7 +39,7 @@ export default function AdminOrders() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge>{o.mode}</Badge>
-                  <Badge variant="outline">{o.status}</Badge>
+                  {/* <Badge variant="outline">{o.status}</Badge> */}
                   <div className="font-bold text-lg">{inr(o.total)}</div>
                 </div>
               </div>

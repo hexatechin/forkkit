@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 import {
   Dialog,
@@ -37,6 +38,7 @@ import {
   X,
   Sparkles,
   Upload,
+  Loader2,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -101,6 +103,7 @@ function ProductsInner() {
   const [f, setF] = useState(BLANK);
 
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [t, setT] = useState(null);
 
@@ -114,6 +117,12 @@ function ProductsInner() {
 
   // Preview URLs for pending files
   const [pendingImagePreviews, setPendingImagePreviews] = useState([]);
+
+  // Product delete confirmation popup
+  const [confirmDelete, setConfirmDelete] = useState({
+    open: false,
+    product: null,
+  });
 
   // ---------------------------------------------------------
   // Load tenant
@@ -694,6 +703,7 @@ function ProductsInner() {
     const method = editing ? "PUT" : "POST";
 
     try {
+      setSaving(true);
       setUploadingImage(pendingImageFiles.length > 0);
 
       // -----------------------------------------------------
@@ -823,6 +833,7 @@ function ProductsInner() {
       toast.error(error?.message || "Failed to save product");
     } finally {
       setUploadingImage(false);
+      setSaving(false);
     }
   };
 
@@ -830,44 +841,59 @@ function ProductsInner() {
   // Delete product
   // ---------------------------------------------------------
 
-  const del = async (p) => {
-    if (!confirm(`Delete "${p.name}"?`)) {
-      return;
-    }
+  const del = (p) => {
+    setConfirmDelete({
+      open: true,
+      product: p,
+    });
+  };
 
-    const token = localStorage.getItem("indocia-token");
+  const handleDeleteProduct = async () => {
+    const p = confirmDelete.product;
 
-    const res = await fetch(`/api/admin/products/${p.id}`, {
-      method: "DELETE",
+    if (!p) return;
 
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    setConfirmDelete({
+      open: false,
+      product: null,
     });
 
-    if (!res.ok) {
-      const data = await res.json();
+    try {
+      const token = localStorage.getItem("indocia-token");
 
-      return toast.error(data.error || "Failed to delete product");
-    }
-
-    toast.success("Product deleted");
-
-    if (p.images?.length > 0 && p.id) {
-      fetch("/api/admin/delete-folder", {
+      const res = await fetch(`/api/admin/products/${p.id}`, {
         method: "DELETE",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          storefrontId: t._id || t.id,
-          folder: "products/" + p.id,
-        }),
       });
-    }
 
-    load();
+      if (!res.ok) {
+        const data = await res.json();
+        return toast.error(data.error || "Failed to delete product");
+      }
+
+      toast.success("Product deleted");
+
+      if (p.images?.length > 0 && p.id) {
+        fetch("/api/admin/delete-folder", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            storefrontId: t._id || t.id,
+            folder: "products/" + p.id,
+          }),
+        });
+      }
+
+      load();
+    } catch (error) {
+      console.error("Product delete error:", error);
+      toast.error(error?.message || "Failed to delete product");
+    }
   };
 
   // ---------------------------------------------------------
@@ -963,6 +989,29 @@ function ProductsInner() {
 
   return (
     <div className="max-w-6xl">
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="Delete product?"
+        message={
+          <>
+            Are you sure you want to delete{" "}
+            <span className="font-semibold text-red-600">
+              "{confirmDelete.product?.name}"
+            </span>
+            ? This action cannot be undone.
+          </>
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        onCancel={() =>
+          setConfirmDelete({
+            open: false,
+            product: null,
+          })
+        }
+        onConfirm={handleDeleteProduct}
+      />
+
       {/* Header */}
 
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -1395,7 +1444,7 @@ function ProductsInner() {
 
                           <button
                             type="button"
-                            disabled={uploadingImage}
+                            disabled={saving}
                             onClick={() => removePendingImage(index)}
                             className="absolute top-1 right-1 h-7 w-7 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black"
                           >
@@ -1616,13 +1665,20 @@ function ProductsInner() {
             <Button
               onClick={save}
               className="w-full h-11 mt-2"
-              disabled={uploadingImage}
+              disabled={saving}
             >
-              {uploadingImage
-                ? "Saving & uploading images..."
-                : editing
-                  ? "Save changes"
-                  : "Add product"}
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {uploadingImage
+                    ? "Saving & uploading images..."
+                    : "Saving..."}
+                </>
+              ) : editing ? (
+                "Save changes"
+              ) : (
+                "Add product"
+              )}
             </Button>
           </div>
         </DialogContent>

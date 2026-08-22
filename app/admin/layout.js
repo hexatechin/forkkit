@@ -124,15 +124,17 @@ export default function AdminLayout({ children }) {
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       >
         <div className="flex items-center justify-between font-bold px-4 py-4 lg:py-5">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-12 w-28 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white shadow">
-              <img
-                src="/indocia.png"
-                alt="Indocia"
-                className="h-12 w-28 rounded-xl object-cover"
-              />
-            </span>
-          </div>
+          <Link href="/">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-12 w-28 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-rose-500 to-fuchsia-500 text-white shadow">
+                <img
+                  src="/indocia.png"
+                  alt="Indocia"
+                  className="h-12 w-28 rounded-xl object-cover"
+                />
+              </span>
+            </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden h-8 w-8 flex items-center justify-center rounded-lg hover:bg-neutral-100"

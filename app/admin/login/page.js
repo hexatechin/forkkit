@@ -15,6 +15,7 @@ export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -31,7 +32,7 @@ export default function AdminLogin() {
       localStorage.setItem("indocia-user", JSON.stringify(data.user));
       localStorage.setItem("indocia-tenant", JSON.stringify(data.tenant));
       toast.success(`Welcome, ${data.user.name}`);
-      router.push("/admin");
+      router.replace("/admin");
     } catch (e) {
       toast.error(e.message);
     } finally {
@@ -58,14 +59,12 @@ export default function AdminLogin() {
 
       // Same storage as normal login
       localStorage.setItem("indocia-token", data.token);
-
       localStorage.setItem("indocia-user", JSON.stringify(data.user));
-
       localStorage.setItem("indocia-tenant", JSON.stringify(data.tenant));
 
       toast.success(`Welcome, ${data.user.name}`);
 
-      router.push("/admin");
+      router.replace("/admin");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Google login failed",
@@ -76,6 +75,22 @@ export default function AdminLogin() {
   };
 
   useEffect(() => {
+    // --------------------------------------------------
+    // CHECK IF USER IS ALREADY LOGGED IN
+    // --------------------------------------------------
+    const token = localStorage.getItem("indocia-token");
+
+    if (token) {
+      router.replace("/admin");
+      return;
+    }
+
+    // No token -> show login page
+    setCheckingAuth(false);
+
+    // --------------------------------------------------
+    // GOOGLE LOGIN INITIALIZATION
+    // --------------------------------------------------
     const initializeGoogle = () => {
       if (!window.google) return;
 
@@ -119,6 +134,17 @@ export default function AdminLogin() {
 
     return () => clearInterval(timer);
   }, []);
+
+  // --------------------------------------------------
+  // DON'T SHOW LOGIN PAGE WHILE CHECKING AUTH
+  // --------------------------------------------------
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-rose-50">
+        <div className="text-sm text-muted-foreground">Checking login...</div>
+      </div>
+    );
+  }
 
   return (
     <>
